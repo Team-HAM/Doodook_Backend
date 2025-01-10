@@ -18,6 +18,18 @@ from django.utils.http import urlsafe_base64_decode
 from jwt import decode as jwt_decode
 from django.conf import settings
 
+#내 프로필 정보 확인&수정하기
+from rest_framework.decorators import api_view, permission_classes  # For @api_view and @permission_classes
+from rest_framework.response import Response  # For Response
+from rest_framework import status  # For status codes like status.HTTP_200_OK
+from .serializers import UserLoginSerializer  # Replace with the correct path if the serializer is in a different location
+
+from rest_framework.permissions import IsAdminUser
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+
+
 User = get_user_model()
 
 # JWT 디코더 함수
@@ -78,3 +90,27 @@ class UserActivateView(APIView):
         except Exception as e:
             print(traceback.format_exc())
             return Response('알 수 없는 오류가 발생했습니다.', status=status.HTTP_400_BAD_REQUEST)
+
+#블로그 3편의 내용
+@api_view(["GET"])
+@permission_classes([IsAdminUser])
+def user_detail(request, pk):
+    try:
+        user = User.objects.get(pk=pk)
+        return Response(UserSerializer(user).data)
+    except User.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
+
+    def put(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response()
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
