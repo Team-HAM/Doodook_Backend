@@ -53,12 +53,37 @@ class UserSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError('닉네임은 한 글자 이상이어야 합니다.')
 
     def create(self, validated_data):
-        #password = validated_data.get("password")
+        # 사용자 생성
         user = super().create(validated_data)
         user.set_password(validated_data["password"])
-        user.is_active = False
+        user.is_active = False  # 이메일 인증이 완료될 때까지 계정 비활성화
         user.save()
+
+        # JWT 토큰 생성
+        payload = JWT_PAYLOAD_HANDLER(user)
+        jwt_token = JWT_ENCODE_HANDLER(payload)
+
+        # 이메일 내용 렌더링
+        message = render_to_string('users/user_activate_email.html', {
+            'user': user,
+            'domain': 'localhost:8000',
+            'uid': force_str(urlsafe_base64_encode(force_bytes(user.pk))),
+            'token': jwt_token,
+        })
+
+        mail_subject = '[SDP] 회원가입 인증 메일입니다'
+        to_email = user.email
+        email = EmailMessage(mail_subject, message, to=[to_email])
+
+        # 이메일 전송
+        try:
+            email.send()
+            print("이메일 전송 성공")
+        except Exception as e:
+            print(f"이메일 전송 실패: {e}")
+
         return user
+
     
 #login
 JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
@@ -91,29 +116,4 @@ class UserLoginSerializer(serializers.Serializer):
             'email': user.email,
             'token': jwt_token
         }
-    #smtp
-    def create(self, validated_data):
-        #password = validated_data.get("password")
-        user = super().create(validated_data)
-        user.set_password(validated_data["password"])
-        user.is_active = False
-        user.save()
-        payload = JWT_PAYLOAD_HANDLER(user)
-        jwt_token = JWT_ENCODE_HANDLER(payload)
-        message = render_to_string('users/user_activate_email.html', {
-            'user': user,
-            'domain': 'localhost:8000',
-            'uid': force_str(urlsafe_base64_encode(force_bytes(user.pk))),
-            'token': jwt_token,
-        })
-        print(message)
-        mail_subject = '[SDP] 회원가입 인증 메일입니다'
-        to_email = user.email
-        email = EmailMessage(mail_subject, message, to = [to_email])
-        try:
-            email.send()
-            print("이메일 전송 성공")
-        except Exception as e:
-            print(f"이메일 전송 실패: {e}")
-
-        return user
+    
