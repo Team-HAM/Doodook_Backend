@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doodook App</title>
+</head>
+<body>
+    <h1>Welcome to Doodook!</h1>
+
+    {% if user.is_authenticated %}
+        <p>안녕하세요, {{ user.username }}님!</p>
+
+        <!-- 로그아웃 버튼 -->
+        <form action="{% url 'logout' %}" method="POST">
+            {% csrf_token %}
+            <button type="submit">로그아웃</button>
+        </form>
+    {% else %}
+        <p><a href="/login/">로그인</a></p>
+    {% endif %}
+</body>
+</html>

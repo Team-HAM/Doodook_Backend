@@ -29,6 +29,10 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 
+#로그아웃
+from django.shortcuts import render, redirect
+from django.contrib.auth import logout
+
 
 User = get_user_model()
 
@@ -114,3 +118,12 @@ class MeView(APIView):
             return Response()
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+def home(request):
+    return render(request, 'base.html')
+
+def logout_view(request):
+    if request.method == 'POST':
+        logout(request)
+        return redirect('/login/')

@@ -23,6 +23,8 @@ urlpatterns = [
     path('doodook/', include('doodook.urls')),
     path("signup/", views.SignupView.as_view()),
     path('login/', views.Login),  # 특수 문자가 없는 올바른 문법
+    path('', views.home, name='home'),
+    path('logout/', views.logout_view, name='logout'),
     path('activate/<str:uid>/<str:token>',views.UserActivateView.as_view(), name ='activate'),
     path("<int:pk>/", views.user_detail),
     path("me/", views.MeView.as_view()),
