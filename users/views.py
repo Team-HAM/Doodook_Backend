@@ -47,11 +47,37 @@ def jwt_payload_get_user_id_handler(token):
         return None
     
     
-# Create your views here.
 class SignupView(CreateAPIView):
     model = get_user_model()
     serializer_class = UserSerializer
     permission_classes = [AllowAny]
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            try:
+                # 이메일 전송 로직
+                response_data = {
+                    "status": "success",
+                    "message": "회원가입 성공. 이메일 인증을 진행해주세요.",
+                    "data": UserSerializer(user).data
+                }
+                return Response(response_data, status=status.HTTP_201_CREATED)
+            except Exception:
+                user.delete()
+                return Response({
+                    "status": "error",
+                    "message": "이메일 전송 실패로 회원가입을 완료할 수 없습니다.",
+                    "code": 400
+                }, status=status.HTTP_400_BAD_REQUEST)  # 수정: 500 → 400
+        return Response({
+            "status": "error",
+            "message": "유효하지 않은 요청입니다.",
+            "code": 400,
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -59,41 +85,60 @@ def Login(request):
     if request.method == 'POST':
         serializer = UserLoginSerializer(data=request.data)
 
-        if not serializer.is_valid(raise_exception=True):
-            return Response({"message": "Request Body Error"}, status=status.HTTP_409_CONFLICT)
-        if serializer.validated_data['email'] == "None":
-            return Response({"message": 'fail'}, status=status.HTTP_200_OK)
-        response = {
-            'success': True,
-            'token': serializer.data['token']
-        }
-        return Response(response, status=status.HTTP_200_OK)
+        if serializer.is_valid():
+            if serializer.validated_data['email'] == "None":
+                return Response({
+                    "status": "error",
+                    "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
+                    "code": 401
+                }, status=status.HTTP_401_UNAUTHORIZED)
+            response = {
+                "status": "success",
+                "message": "로그인 성공",
+                "data": {
+                    "token": serializer.data['token']
+                }
+            }
+            return Response(response, status=status.HTTP_200_OK)
+        return Response({
+            "status": "error",
+            "message": "유효하지 않은 요청입니다.",
+            "code": 400,
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     
 # User Activation View
 class UserActivateView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, uid, token):
+    permission_classes = [AllowAny]  # 누구나 접근 가능
+    def get(self, request, id):
+        token = request.query_params.get('token')
         try:
-            # UID 디코딩
-            real_uid = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=real_uid)
-
-            # JWT 토큰 디코딩 및 검증
+            user = User.objects.get(pk=id)
             user_id = jwt_payload_get_user_id_handler(token)
-            if user_id is None or int(real_uid) != int(user_id):
-                return Response('인증에 실패하였습니다.', status=status.HTTP_400_BAD_REQUEST)
 
-            # 계정 활성화
+            if user_id is None or int(id) != int(user_id):
+                return Response({
+                    "status": "error",
+                    "message": "인증에 실패하였습니다.",
+                    "code": 400
+                }, status=status.HTTP_400_BAD_REQUEST)
+
             user.is_active = True
             user.save()
-            return Response(f'{user.email} 계정이 활성화되었습니다.', status=status.HTTP_200_OK)
+            return Response({
+                "status": "success",
+                "message": "계정이 활성화되었습니다."
+            }, status=status.HTTP_200_OK)
 
         except User.DoesNotExist:
-            return Response('유효하지 않은 사용자입니다.', status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            print(traceback.format_exc())
-            return Response('알 수 없는 오류가 발생했습니다.', status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "status": "error",
+                "message": "사용자를 찾을 수 없습니다.",
+                "code": 404
+            }, status=status.HTTP_404_NOT_FOUND)  # 수정: 400 → 404
+
+
 
 #블로그 3편의 내용
 @api_view(["GET"])
@@ -126,4 +171,4 @@ def home(request):
 def logout_view(request):
     if request.method == 'POST':
         logout(request)
-        return redirect('/login/')
+        return redirect('/sessions')  # 수정된 URL로 리디렉션

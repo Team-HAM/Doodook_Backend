@@ -14,10 +14,14 @@ from pathlib import Path
 from datetime import timedelta
 import environ
 
+#SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
+
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
 
 # env
 env=environ.Env(DEBUG=(bool,False))
@@ -31,10 +35,9 @@ SECRET_KEY=env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG=env('DEBUG')
-
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
-
+#ALLOWED_HOSTS=['*'] 개발환경 시 활성화가 편함함
 
 # Application definition
 

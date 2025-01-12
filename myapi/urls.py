@@ -21,11 +21,18 @@ from users import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('doodook/', include('doodook.urls')),
-    path("signup/", views.SignupView.as_view()),
-    path('login/', views.Login),  # 특수 문자가 없는 올바른 문법
+    path('users', views.SignupView.as_view(), name='signup'),  # POST (회원가입입)
+    path('sessions', views.Login, name='login'),  # POST (로그인)
+    path('users/<int:id>/activation', views.UserActivateView.as_view(), name='activation'),  # GET (인증증)
+
+    # path("signup/", views.SignupView.as_view()), ->기존 signup url
+    # path('login/', views.Login),  # 특수 문자가 없는 올바른 문법 ->기존 login url
+
     path('', views.home, name='home'),
     path('logout/', views.logout_view, name='logout'),
-    path('activate/<str:uid>/<str:token>',views.UserActivateView.as_view(), name ='activate'),
+
+    # path('activate/<str:uid>/<str:token>',views.UserActivateView.as_view(), name ='activate'),->기존 인증 url
+
     path("<int:pk>/", views.user_detail),
     path("me/", views.MeView.as_view()),
 ]
