@@ -38,6 +38,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import logout
 from django.http import JsonResponse
 
+#CRSF 비활성화
+from django.views.decorators.csrf import csrf_exempt
+
 
 User = get_user_model()
 
@@ -185,12 +188,28 @@ def home(request):
             status=500
         )
 
+
+
+
+@csrf_exempt  # CSRF 보호를 비활성화
 def logout_view(request):
     if request.method == 'POST':
         try:
-            # 로그아웃 처리
             logout(request)
-            return redirect('/sessions')
+            
+            # 로그아웃 후 인증되지 않은 상태인지 확인
+            if not request.user.is_authenticated:
+                return JsonResponse({
+                    "status": "success",
+                    "message": "로그아웃이 성공적으로 처리되었습니다.",
+                    "code": 200
+                })
+            else:
+                return JsonResponse({
+                    "status": "error",
+                    "message": "로그아웃에 실패했습니다. 다시 시도해주세요.",
+                    "code": 500
+                })
         except Exception as e:
             # 서버 오류 응답
             return JsonResponse(
@@ -211,3 +230,4 @@ def logout_view(request):
             },
             status=405
         )
+
