@@ -33,6 +33,11 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
 
+#JSON 오류 메시지 출력
+from django.shortcuts import render, redirect
+from django.contrib.auth import logout
+from django.http import JsonResponse
+
 
 User = get_user_model()
 
@@ -166,9 +171,43 @@ class MeView(APIView):
 
 
 def home(request):
-    return render(request, 'base.html')
+    try:
+        # 정상 동작
+        return render(request, 'base.html')
+    except Exception as e:
+        # 서버 오류 응답
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "페이지를 불러오는 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+                "code": 500
+            },
+            status=500
+        )
 
 def logout_view(request):
     if request.method == 'POST':
-        logout(request)
-        return redirect('/sessions')  # 수정된 URL로 리디렉션
+        try:
+            # 로그아웃 처리
+            logout(request)
+            return redirect('/sessions')
+        except Exception as e:
+            # 서버 오류 응답
+            return JsonResponse(
+                {
+                    "status": "error",
+                    "message": "로그아웃 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+                    "code": 500
+                },
+                status=500
+            )
+    else:
+        # 잘못된 요청 방식 응답
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": "요청 방식이 올바르지 않습니다. POST 요청만 허용됩니다.",
+                "code": 405
+            },
+            status=405
+        )
