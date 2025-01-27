@@ -261,17 +261,55 @@ class KiwoomAPI:
         self.event_loop.quit()
 
     def get_current_price(self, stock_code):
-        self.kiwoom.dynamicCall("SetInputValue(QString, QString)", "종목코드", stock_code)
-        self.kiwoom.dynamicCall("CommRqData(QString, QString, int, QString)", "주식현재가요청", "opt10001", 0, "0101")
-        self.event_loop = QEventLoop()
-        self.kiwoom.OnReceiveTrData.connect(self._on_receive_tr_data)
-        self.event_loop.exec_()
-        return self.price
+        try:
+            # 주식 코드 설정
+            self.kiwoom.dynamicCall("SetInputValue(QString, QString)", "종목코드", stock_code)
+            
+            # 주식 가격 요청
+            self.kiwoom.dynamicCall("CommRqData(QString, QString, int, QString)", "주식현재가요청", "opt10001", 0, "0101")
+
+            # 이벤트 루프 실행
+            self.event_loop = QEventLoop()
+            self.kiwoom.OnReceiveTrData.connect(self._on_receive_tr_data)
+            
+            # 이벤트 루프가 종료될 때까지 대기
+            self.event_loop.exec_()
+
+            # 가격 조회 실패 시
+            if self.price is None:
+                raise ValueError(f"주식 코드 '{stock_code}'에 대한 가격 조회 실패.")
+            
+            return self.price
+
+        except Exception as e:
+            # 예외 발생 시 오류 메시지 출력
+            print(f"주식 가격 조회 오류: {e}")
+            # 예외를 그대로 던져서 trade 함수에서 처리할 수 있도록 함
+            raise Exception(f"주식 가격 조회 중 오류가 발생했습니다: {str(e)}")
+
 
     def _on_receive_tr_data(self, screen_no, rqname, trcode, record_name, prev_next, data_len, err_code, msg1, msg2):
         if rqname == "주식현재가요청":
-            self.price = int(self.kiwoom.dynamicCall("GetCommData(QString, QString, int, QString)", trcode, record_name, 0, "현재가").strip())
-            self.event_loop.quit()
+            try:
+                price_str = self.kiwoom.dynamicCall("GetCommData(QString, QString, int, QString)", trcode, record_name, 0, "현재가").strip()
+
+                # 빈 문자열 체크
+                if not price_str:
+                    raise ValueError(f"주식 가격 조회 실패: {msg1} - {msg2}")
+
+                # 정수로 변환
+                self.price = int(price_str)
+
+            except ValueError as e:
+                print(f"주식 가격 조회 오류: {e}")
+                self.price = None  # 가격을 None으로 설정하여 이후 처리 가능하도록 함
+            except Exception as e:
+                print(f"예상치 못한 오류 발생: {e}")
+                self.price = None
+            finally:
+                # 이벤트 루프 종료
+                self.event_loop.quit()
+
 
 def get_stock_price(stock_code):
     try:
@@ -280,60 +318,137 @@ def get_stock_price(stock_code):
     except Exception as e:
         print(f"주식 가격 조회 오류: {e}")
         return None
-    
-def stock_price(request): #최근에 만든
+
+
+def stock_price(request):  # 최근에 만든
     if request.method == "GET":
         stock_code = request.GET.get("stock_code")  # 주식 코드 입력 받기
-        
-        # 주식의 현재 가격을 조회
-        current_price = get_stock_price(stock_code)
 
-        if current_price is None:
-            return JsonResponse({"message": "주식 가격 조회에 실패했습니다."})
-        
-        return JsonResponse({"stock_code": stock_code, "current_price": current_price})
+        if not stock_code:
+            return JsonResponse({
+                "status": "error",
+                "message": "유효하지 않은 요청 매개변수입니다.",
+                "code": 400
+            }, status=400)
 
-def trade(request):
+        try:
+            # 주식의 현재 가격을 조회
+            current_price = get_stock_price(stock_code)
+
+            if current_price is None:  # 주식 코드가 없거나 데이터를 못 가져왔을 경우
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"'{stock_code}' 주식 가격 조회에 실패했습니다.",
+                    "code": 404
+                }, status=404)
+
+            # 성공적으로 데이터를 가져온 경우
+            return JsonResponse({
+                "status": "success",
+                "stock_code": stock_code,
+                "current_price": current_price
+            })
+        
+        except Exception as e:
+            # 기타 예외를 처리
+            return JsonResponse({
+                "status": "error",
+                "message": f"서버에서 예기치 못한 오류가 발생했습니다: {str(e)}",
+                "code": 500
+            }, status=500)
+def trade(request): # 매수/매도
     if request.method == "POST":
-        action = request.POST.get("action")  # 매수 또는 매도
+        action = request.POST.get("action")
         stock_code = request.POST.get("stock_code")
-        quantity = int(request.POST.get("quantity"))
-        price = int(request.POST.get("price"))
-        
-        # 주식의 현재 가격을 조회
+        try:
+            quantity = int(request.POST.get("quantity"))
+            price = int(request.POST.get("price"))
+        except (TypeError, ValueError):
+            return JsonResponse({
+                "status": "error",
+                "message": "유효하지 않은 요청 매개변수입니다.",
+                "code": 400
+            }, status=400)
+
         current_price = get_stock_price(stock_code)
 
         if current_price is None:
-            return JsonResponse({"message": "주식 가격 조회에 실패했습니다."})
-        
-        # 매수/매도 처리
+            return JsonResponse({
+                "status": "error",
+                "message": "주식 가격 조회에 실패했습니다.",
+                "code": 500
+            }, status=500)
+
+        # 로그: 실제 비교되는 값 확인
+        print(f"현재 가격: {current_price}, 매도 가격: {price}")  # 디버깅용 로그
+
         if action == "buy":
-            if price >= current_price:  # 매수 조건: 입력된 가격이 현재 가격 이상
+            if price >= current_price:
                 portfolio, created = StockPortfolio.objects.get_or_create(stock_code=stock_code)
-                portfolio.quantity += quantity  # 기존 보유량에 추가
-                portfolio.price = price        # 최신 가격 업데이트
+                portfolio.quantity += quantity
+                portfolio.price = price
                 portfolio.save()
                 response = f"매수 주문이 완료되었습니다: {quantity}주 {stock_code}를 {price}에 매수했습니다."
             else:
-                response = f"매수 실패: 현재 가격({current_price})보다 높은 가격으로 매수할 수 없습니다."
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"매수 실패: 현재 가격({current_price})보다 높은 가격으로 매수할 수 없습니다.",
+                    "code": 400
+                }, status=400)
 
         elif action == "sell":
-            if price <= current_price:  # 매도 조건: 입력된 가격이 현재 가격 이하
-                portfolio = StockPortfolio.objects.filter(stock_code=stock_code).first()
-                if portfolio and portfolio.quantity >= quantity:
-                    portfolio.quantity -= quantity  # 수량 차감
-                    portfolio.save()
-                    response = f"매도 주문이 완료되었습니다: {quantity}주 {stock_code}를 {price}에 매도했습니다."
-                else:
-                    response = "매도할 주식이 부족하거나 존재하지 않습니다."
+            # 가격 비교 명확히 하기 위해 int로 변환
+            if int(price) < int(current_price):
+                # 오류 발생시 처리
+                print(f"매도 가격({price})이 현재 가격({current_price})보다 낮습니다.")  # 디버깅용 로그
+                return JsonResponse({
+                    "status": "error",
+                    "message": f"매도 실패: 현재 가격({current_price})보다 낮은 가격으로 매도할 수 없습니다.",
+                    "code": 400
+                }, status=400)
             else:
-                response = f"매도 실패: 현재 가격({current_price})보다 낮은 가격으로 매도할 수 없습니다."
-        
+                portfolio = StockPortfolio.objects.filter(stock_code=stock_code).first()
+                if portfolio:
+                    if portfolio.quantity >= quantity:
+                        portfolio.quantity -= quantity
+                        portfolio.save()
+                        response = f"매도 주문이 완료되었습니다: {quantity}주 {stock_code}를 {price}에 매도했습니다."
+                    else:
+                        return JsonResponse({
+                            "status": "error",
+                            "message": "매도할 주식이 부족하거나 존재하지 않습니다.",
+                            "code": 400
+                        }, status=400)
+                else:
+                    return JsonResponse({
+                        "status": "error",
+                        "message": f"'{stock_code}'에 대한 주식 포트폴리오가 존재하지 않습니다.",
+                        "code": 400
+                    }, status=400)
+
         else:
-            response = "Invalid action."
+            return JsonResponse({
+                "status": "error",
+                "message": "Invalid action.",
+                "code": 400
+            }, status=400)
 
         return JsonResponse({"message": response})
-    
-    # GET 요청 시 거래 내역을 불러옵니다.
-    portfolios = StockPortfolio.objects.all()
+
+    # GET 요청 처리
+    try:
+        portfolios = StockPortfolio.objects.all()
+        if not portfolios.exists():
+            return JsonResponse({
+                "status": "error",
+                "message": "거래 내역이 없습니다.",
+                "code": 404
+            }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "message": "서버 내부 오류로 거래 내역을 불러올 수 없습니다.",
+            "code": 500
+        }, status=500)
+
     return render(request, "users/trade.html", {"portfolios": portfolios})
