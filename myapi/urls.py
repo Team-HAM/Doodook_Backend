@@ -35,4 +35,8 @@ urlpatterns = [
 
     path("<int:pk>/", views.user_detail),
     path("me/", views.MeView.as_view()),
+    path('trade/', views.trade, name='trade'), #매수/매도
+    path('stock_price/', views.stock_price, name='stock_price'), #현재가
+    
+
 ]

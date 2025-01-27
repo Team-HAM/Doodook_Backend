@@ -230,4 +230,110 @@ def logout_view(request):
             },
             status=405
         )
+    
+    
+# views.py
+from django.shortcuts import render
+from django.http import JsonResponse
+from .models import StockPortfolio
+import sys
+from PyQt5.QAxContainer import QAxWidget
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtCore import QEventLoop
 
+# 가상 계좌에 대한 설정
+FAKE_ACCOUNT = "123-456-789"  # 하드 코딩된 계좌 번호
+
+class KiwoomAPI:
+    def __init__(self):
+        self.app = QApplication(sys.argv)  # QApplication 초기화
+        self.kiwoom = QAxWidget("KHOPENAPI.KHOpenAPICtrl.1")
+        self.event_loop = QEventLoop()
+        self.kiwoom.OnEventConnect.connect(self._on_login)
+        self.kiwoom.dynamicCall("CommConnect()")  # 로그인 요청
+        self.event_loop.exec_()
+
+    def _on_login(self, err_code):
+        if err_code == 0:
+            print("Kiwoom API 로그인 성공")
+        else:
+            print(f"Kiwoom API 로그인 실패, 에러 코드: {err_code}")
+        self.event_loop.quit()
+
+    def get_current_price(self, stock_code):
+        self.kiwoom.dynamicCall("SetInputValue(QString, QString)", "종목코드", stock_code)
+        self.kiwoom.dynamicCall("CommRqData(QString, QString, int, QString)", "주식현재가요청", "opt10001", 0, "0101")
+        self.event_loop = QEventLoop()
+        self.kiwoom.OnReceiveTrData.connect(self._on_receive_tr_data)
+        self.event_loop.exec_()
+        return self.price
+
+    def _on_receive_tr_data(self, screen_no, rqname, trcode, record_name, prev_next, data_len, err_code, msg1, msg2):
+        if rqname == "주식현재가요청":
+            self.price = int(self.kiwoom.dynamicCall("GetCommData(QString, QString, int, QString)", trcode, record_name, 0, "현재가").strip())
+            self.event_loop.quit()
+
+def get_stock_price(stock_code):
+    try:
+        api = KiwoomAPI()
+        return api.get_current_price(stock_code)
+    except Exception as e:
+        print(f"주식 가격 조회 오류: {e}")
+        return None
+    
+def stock_price(request): #최근에 만든
+    if request.method == "GET":
+        stock_code = request.GET.get("stock_code")  # 주식 코드 입력 받기
+        
+        # 주식의 현재 가격을 조회
+        current_price = get_stock_price(stock_code)
+
+        if current_price is None:
+            return JsonResponse({"message": "주식 가격 조회에 실패했습니다."})
+        
+        return JsonResponse({"stock_code": stock_code, "current_price": current_price})
+
+def trade(request):
+    if request.method == "POST":
+        action = request.POST.get("action")  # 매수 또는 매도
+        stock_code = request.POST.get("stock_code")
+        quantity = int(request.POST.get("quantity"))
+        price = int(request.POST.get("price"))
+        
+        # 주식의 현재 가격을 조회
+        current_price = get_stock_price(stock_code)
+
+        if current_price is None:
+            return JsonResponse({"message": "주식 가격 조회에 실패했습니다."})
+        
+        # 매수/매도 처리
+        if action == "buy":
+            if price >= current_price:  # 매수 조건: 입력된 가격이 현재 가격 이상
+                portfolio, created = StockPortfolio.objects.get_or_create(stock_code=stock_code)
+                portfolio.quantity += quantity  # 기존 보유량에 추가
+                portfolio.price = price        # 최신 가격 업데이트
+                portfolio.save()
+                response = f"매수 주문이 완료되었습니다: {quantity}주 {stock_code}를 {price}에 매수했습니다."
+            else:
+                response = f"매수 실패: 현재 가격({current_price})보다 높은 가격으로 매수할 수 없습니다."
+
+        elif action == "sell":
+            if price <= current_price:  # 매도 조건: 입력된 가격이 현재 가격 이하
+                portfolio = StockPortfolio.objects.filter(stock_code=stock_code).first()
+                if portfolio and portfolio.quantity >= quantity:
+                    portfolio.quantity -= quantity  # 수량 차감
+                    portfolio.save()
+                    response = f"매도 주문이 완료되었습니다: {quantity}주 {stock_code}를 {price}에 매도했습니다."
+                else:
+                    response = "매도할 주식이 부족하거나 존재하지 않습니다."
+            else:
+                response = f"매도 실패: 현재 가격({current_price})보다 낮은 가격으로 매도할 수 없습니다."
+        
+        else:
+            response = "Invalid action."
+
+        return JsonResponse({"message": response})
+    
+    # GET 요청 시 거래 내역을 불러옵니다.
+    portfolios = StockPortfolio.objects.all()
+    return render(request, "users/trade.html", {"portfolios": portfolios})
