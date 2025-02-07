@@ -35,6 +35,7 @@ SECRET_KEY=env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG=env('DEBUG')
+# DEBUG=True
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 #ALLOWED_HOSTS=['*'] 개발환경 시 활성화가 편함함
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'doodook',
     'users',
+    'trading',
     'rest_framework',
 ]
 

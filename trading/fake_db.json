@@ -1,0 +1,35 @@
+{
+    "users": {
+        "1": {
+            "username": "Alice",
+            "balance": 505000,
+            "stocks": {
+                "005930": {
+                    "quantity": 17,
+                    "average_price": 72000.0
+                }
+            }
+        },
+        "2": {
+            "username": "Bob",
+            "balance": 500000,
+            "stocks": {}
+        }
+    },
+    "orders": [
+        {
+            "user_id": 1,
+            "stock_code": "005930",
+            "price": 72000,
+            "quantity": 10,
+            "type": "buy"
+        },
+        {
+            "user_id": 1,
+            "stock_code": "005930",
+            "price": 75000,
+            "quantity": 3,
+            "type": "sell"
+        }
+    ]
+}
