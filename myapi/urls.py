@@ -19,4 +19,7 @@ urlpatterns = [
 
     # ✅ trading 관련 URL
     path('trading/', include('trading.urls')),  # trading 앱에서 urls.py를 관리하도록 변경
+
+    # ✅charting 관련 URL
+    path("charting/", include("charting.urls")),  # 🚀 일봉 차트 API 추가
 ]
