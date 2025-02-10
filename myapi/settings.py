@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import environ
 
-#SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
+SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
 
 
 

@@ -8,4 +8,5 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('<int:pk>/', views.user_detail, name="user_detail"),
     path('me/', views.MeView.as_view(), name='me'),
+    path('account/', views.get_user_account, name='get_user_account'), #사용자별 계좌 잔고가 될 듯함
 ]

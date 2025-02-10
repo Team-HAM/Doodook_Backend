@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework.generics import CreateAPIView
 from django.contrib.auth import get_user_model
+from users.models import Account
 from users.serializers import UserSerializer
 from rest_framework.permissions import AllowAny
 
@@ -86,28 +87,50 @@ class SignupView(CreateAPIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework import status
+from .serializers import UserLoginSerializer
+from .utils import create_jwt_token  # create_jwt_token을 추가로 임포트합니다.
+from django.contrib.auth import authenticate
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def Login(request):
     if request.method == 'POST':
+        # 사용자가 보낸 데이터로 시리얼라이저 생성
         serializer = UserLoginSerializer(data=request.data)
 
+        # 시리얼라이저 검증
         if serializer.is_valid():
-            if serializer.validated_data['email'] == "None":
+            # 이메일과 비밀번호를 사용하여 사용자 인증
+            email = serializer.validated_data['email']
+            password = serializer.validated_data['password']
+
+            # 인증을 시도
+            user = authenticate(request, username=email, password=password)
+
+            if user is None:
                 return Response({
                     "status": "error",
                     "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
                     "code": 401
                 }, status=status.HTTP_401_UNAUTHORIZED)
+            
+            # 로그인 성공, JWT 토큰 생성
+            token = create_jwt_token(user)
+
             response = {
                 "status": "success",
                 "message": "로그인 성공",
                 "data": {
-                    "token": serializer.data['token']
+                    "token": token  # 생성된 토큰을 응답 데이터로 반환
                 }
             }
             return Response(response, status=status.HTTP_200_OK)
+
+        # 유효하지 않은 요청인 경우
         return Response({
             "status": "error",
             "message": "유효하지 않은 요청입니다.",
@@ -115,7 +138,6 @@ def Login(request):
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
-    
 # User Activation View
 class UserActivateView(APIView):
     permission_classes = [AllowAny]  # 누구나 접근 가능
@@ -232,3 +254,40 @@ def logout_view(request):
         )
     
     
+#계좌 정보 가져오기
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .serializers import UserSerializer, AccountSerializer
+from .models import Account
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_account(request):
+    """현재 로그인한 사용자의 닉네임과 계좌 정보를 반환"""
+    try:
+        # 로그인한 사용자 정보 조회
+        user = request.user
+        
+        # UserSerializer를 사용하여 사용자 정보 직렬화
+        user_data = UserSerializer(user).data
+        
+        # 로그인한 사용자의 계좌 정보 조회
+        account = Account.objects.get(user=user)
+        
+        # AccountSerializer를 사용하여 계좌 정보 직렬화
+        account_data = AccountSerializer(account).data
+        
+        # 사용자 정보와 계좌 정보를 함께 반환
+        return Response({
+            "user": user_data,
+            "account": account_data
+        })
+
+    except Account.DoesNotExist:
+        # 계좌 정보가 없는 경우 처리
+        return Response({"error": "계좌 정보가 없습니다."}, status=404)
+    except Exception as e:
+        # 다른 예외 처리
+        return Response({"error": str(e)}, status=500)
+

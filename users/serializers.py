@@ -9,6 +9,7 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 
 User = get_user_model()
+from .models import Account
 
 # JWT 핸들러 설정
 JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
@@ -18,6 +19,7 @@ JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
 # JWT 토큰 생성 함수
 def generate_jwt_token(user):
     payload = JWT_PAYLOAD_HANDLER(user)
+    payload['user_id'] = user.id # 사용자 ID를 명시적으로 추가
     return JWT_ENCODE_HANDLER(payload)
 
 
@@ -25,7 +27,6 @@ def generate_jwt_token(user):
 def email_isvalid(email):
     email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     return re.match(email_regex, email) is not None
-
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -74,9 +75,24 @@ class UserSerializer(serializers.ModelSerializer):
                 "message": "이메일 전송에 실패하여 회원가입이 완료되지 않았습니다.",
                 "details": str(e)
             })
+        # 계좌 자동 생성
+        Account.objects.create(user=user)
 
         return user
 
+    def get_account(self, obj):
+        """계좌 정보는 사용자에게 제공된 데이터로 처리"""
+        try:
+            account = Account.objects.get(user=obj)
+            return {
+                "account_number": account.account_number,
+                "balance": account.balance,
+            }
+        except Account.DoesNotExist:
+            return {"error": "계좌 정보가 제공되지 않았습니다."}
+
+
+from rest_framework_simplejwt.tokens import RefreshToken
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.CharField(max_length=64)
@@ -86,7 +102,8 @@ class UserLoginSerializer(serializers.Serializer):
     def validate(self, data):
         email = data.get("email", None)
         password = data.get("password", None)
-        user = authenticate(email=email, password=password)
+        user = authenticate(request=self.context.get('request'), username=email, password=password)
+
 
         if user is None:
             raise serializers.ValidationError({
@@ -96,8 +113,9 @@ class UserLoginSerializer(serializers.Serializer):
             })
 
         try:
-            jwt_token = generate_jwt_token(user)
-            update_last_login(None, user)
+            refresh = RefreshToken.for_user(user)
+            access_token = refresh.access_token
+            data["token"] = str(access_token)  # token 필드에 access token 추가
         except Exception as e:
             raise serializers.ValidationError({
                 "status": "error",
@@ -105,4 +123,12 @@ class UserLoginSerializer(serializers.Serializer):
                 "code": 500,
                 "details": str(e)
             })
-        return {'email': user.email, 'token': jwt_token}
+        return data
+
+from rest_framework import serializers
+from .models import Account
+
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['balance']  # 필요에 따라 다른 필드 추가 가능
