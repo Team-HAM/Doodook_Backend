@@ -80,3 +80,35 @@ class DailyChartView(APIView):
         except Exception as e:
             print(f"🚨 차트 생성 오류: {e}")  # ✅ 오류 로그 추가
             return JsonResponse({"error": str(e)}, status=500)
+
+
+
+class DailyChartDataView(APIView):
+    """ 특정 종목의 일봉 데이터를 JSON으로 반환 """
+
+    permission_classes = [AllowAny]  # 🚀 인증 없이 접근 가능
+
+    def get(self, request, stock_code):
+        try:
+            df = get_price_data(stock_code)  # ✅ get_price_data() 함수 호출
+
+            if df is None or df.empty:
+                return JsonResponse({"error": "일봉 데이터를 가져올 수 없습니다."}, status=404)
+
+            # 🚀 날짜 데이터 변환
+            if not isinstance(df.index, pd.DatetimeIndex):
+                df.index = pd.to_datetime(df.index)
+
+            # 🚀 이동평균선 추가 (5일, 20일, 60일)
+            df["MA5"] = df["close"].rolling(window=5).mean()
+            df["MA20"] = df["close"].rolling(window=20).mean()
+            df["MA60"] = df["close"].rolling(window=60).mean()
+
+            # 🚀 JSON 형식으로 변환
+            json_data = df.tail(60).reset_index().to_dict(orient="records")  # ✅ 최근 60일 데이터만 반환
+
+            return JsonResponse({"stock_code": stock_code, "data": json_data}, status=200, safe=False)  # 🚀 JSON 응답
+
+        except Exception as e:
+            print(f"🚨 JSON 응답 오류: {e}")  # ✅ 오류 로그 추가
+            return JsonResponse({"error": str(e)}, status=500)
