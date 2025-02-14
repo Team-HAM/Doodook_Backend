@@ -11,6 +11,8 @@ urlpatterns = [
     path('users/', include('users.urls')),  # users 앱에서 urls.py를 관리하도록 변경
     path('sessions', user_views.Login, name='login'),
     path('users/<int:id>/activation', user_views.UserActivateView.as_view(), name='activation'),
+    path('users/delete/', user_views.UserDeleteView.as_view(), name='user-delete'),  # 회원탈퇴 API
+
 
     path('', user_views.home, name='home'),
     path('logout/', user_views.logout_view, name='logout'),

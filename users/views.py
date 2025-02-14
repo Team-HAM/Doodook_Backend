@@ -291,3 +291,30 @@ def get_user_account(request):
         # 다른 예외 처리
         return Response({"error": str(e)}, status=500)
 
+
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class UserDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        try:
+            user = request.user  # 로그인한 사용자
+            user.delete()  # 사용자 삭제
+            return Response({
+                "status": "success",
+                "message": "회원탈퇴가 완료되었습니다."
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": "회원탈퇴 처리 중 오류가 발생했습니다.",
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
