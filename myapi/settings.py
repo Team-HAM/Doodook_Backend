@@ -55,6 +55,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware', ## 이거 추가!! 위치 중요!!!
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -62,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', ## 이거 추가!!
 ]
 
 ROOT_URLCONF = 'myapi.urls'
@@ -172,5 +174,9 @@ DEFAULT_FROM_MAIL = EMAIL_HOST_USER
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+HANTU_API_APP_KEY = env("HANTU_API_APP_KEY")
+HANTU_API_APP_SECRET= env("HANTU_API_APP_SECRET")
+
+
 # 추가: 한국투자증권 설정
-KIS_CONFIG_PATH = os.path.join(BASE_DIR, 'config', 'kis_devlp.yaml')
+# KIS_CONFIG_PATH = os.path.join(BASE_DIR, 'config', 'kis_devlp.yaml')

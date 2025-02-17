@@ -3,6 +3,7 @@ from django.http import HttpResponse
 from django.utils import timezone
 
 from common import hantu_urls, hantu_tr_id, constants
+from myapi.settings import HANTU_API_APP_KEY, HANTU_API_APP_SECRET
 from .models import OAuthToken, AccessToken
 
 import json
@@ -20,8 +21,8 @@ def get_oauth_token(request):
     if len(existing_oauth_token) == 0:
         req_url = f"{hantu_urls.TST_API_URL_BASE}{hantu_urls.OAUTH_TOKEN_ISSUE}"
         header = _header
-        body = {'appkey': constants.HANTU_API_APP_KEY,
-                'secretkey': constants.HANTU_API_APP_SECRET,
+        body = {'appkey': HANTU_API_APP_KEY,
+                'secretkey': HANTU_API_APP_SECRET,
                 'grant_type': 'client_credentials'}
 
         res = requests.post(req_url, headers=header, data=json.dumps(body))
@@ -54,8 +55,8 @@ def issue_access_token(request):
 
     req_url = f"{hantu_urls.TST_API_URL_BASE}{hantu_urls.ACCESS_TOKEN_ISSUE}"
     header = _header
-    body = {'appkey': constants.HANTU_API_APP_KEY,
-            'appsecret': constants.HANTU_API_APP_SECRET,
+    body = {'appkey': HANTU_API_APP_KEY,
+            'appsecret': HANTU_API_APP_SECRET,
             'grant_type': 'client_credentials'}
     
     res = requests.post(req_url, headers=header, data=json.dumps(body))
@@ -97,8 +98,8 @@ def destroy_access_token(request):
 
     req_url = f"{hantu_urls.TST_API_URL_BASE}{hantu_urls.ACCESS_TOKEN_DESTROY}"
     header = _header
-    body = {'appkey': constants.HANTU_API_APP_KEY,
-            'appsecret': constants.HANTU_API_APP_SECRET,
+    body = {'appkey': HANTU_API_APP_KEY,
+            'appsecret': HANTU_API_APP_SECRET,
             'token': exisiting_access_token[0].access_token}
     
     res = requests.post(req_url, headers=header, data=json.dumps(body))
@@ -140,8 +141,8 @@ def get_current_stock_price(request):
     headers = {
         "content-type": "application/json",
         "authorization": f"Bearer {access_token.access_token}",
-        "appkey": constants.HANTU_API_APP_KEY,
-        "appsecret": constants.HANTU_API_APP_SECRET,  # 실제 API 키와 시크릿 코드 입력
+        "appkey": HANTU_API_APP_KEY,
+        "appsecret": HANTU_API_APP_SECRET,  # 실제 API 키와 시크릿 코드 입력
         "tr_id": "FHKST01010100"  # 주식 현재가 조회 TR ID
     }
     params = {
