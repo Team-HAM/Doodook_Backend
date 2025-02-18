@@ -46,7 +46,7 @@ CORS_ALLOW_CREDENTIALS=True
 # Application definition
 
 INSTALLED_APPS = [
-    'django_extensions',
+    # 'django_extensions',
     'trade_hantu.apps.TradeHantuConfig',
     'django.contrib.admin',
     'django.contrib.auth',
