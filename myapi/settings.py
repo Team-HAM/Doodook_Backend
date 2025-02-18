@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import environ
 
-#SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
+SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
 
 
 
@@ -34,14 +34,19 @@ environ.Env.read_env(os.path.join(BASE_DIR,'.env'))
 SECRET_KEY=env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG=env('DEBUG')
+# DEBUG=env('DEBUG')
+DEBUG=False
 # ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 ALLOWED_HOSTS=['*'] #개발환경 시 활성화가 편함함
 
+CORS_ORIGIN_ALLOW_ALL=True
+CORS_ALLOW_CREDENTIALS=True
+
 # Application definition
 
 INSTALLED_APPS = [
+    'django_extensions',
     'trade_hantu.apps.TradeHantuConfig',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -52,6 +57,8 @@ INSTALLED_APPS = [
     'doodook',
     'users',
     'rest_framework',
+    'trading.apps.TradingConfig',
+    # 'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -90,13 +97,39 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+import pymysql
+pymysql.install_as_MySQLdb()
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env("DB_NAME"),
+        'USER': env("DB_USER"),
+        'PASSWORD' : env("DB_PASSWORD"),
+        'HOST' : env("DB_HOST"),
+        'PORT' : env("DB_PORT"),
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'doodook_db',
+#         'USER': 'ham22',
+#         'PASSWORD' : '',
+#         'HOST' : 'svc.sel4.cloudtype.app',
+#         'PORT' : '30898',
+#         'OPTIONS':{
+#             'init_command' : "SET sql_mode = 'STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -172,7 +205,7 @@ SERVER_EMAIL = EMAIL_HOST_USER
 DEFAULT_FROM_MAIL = EMAIL_HOST_USER
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# BASE_DIR = Path(__file__).resolve().parent.parent
 
 HANTU_API_APP_KEY = env("HANTU_API_APP_KEY")
 HANTU_API_APP_SECRET= env("HANTU_API_APP_SECRET")
