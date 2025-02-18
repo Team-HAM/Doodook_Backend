@@ -44,7 +44,13 @@ CORS_ORIGIN_ALLOW_ALL=True
 CORS_ALLOW_CREDENTIALS=True
 
 # Application definition
-
+THIRD_PARTIES = [
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+]
 INSTALLED_APPS = [
     # 'django_extensions',
     'trade_hantu.apps.TradeHantuConfig',
@@ -56,10 +62,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'doodook',
     'users',
-    'rest_framework',
     'trading.apps.TradingConfig',
     # 'corsheaders',
-]
+]+ THIRD_PARTIES
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', ## 이거 추가!! 위치 중요!!!
@@ -175,12 +180,12 @@ STATIC_ROOT=os.path.join(BASE_DIR,'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# login
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated",],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        #"rest_framework.authentication.SessionAuthentication",
     ],
 }
 
