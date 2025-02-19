@@ -1,10 +1,14 @@
 from django.shortcuts import render
 from django.http import JsonResponse
-from trade_hantu.models import OAuthToken, AccessToken
+from trade_hantu.models import AccessToken
 from myapi.settings import HANTU_API_APP_KEY, HANTU_API_APP_SECRET
 from .models import StockPortfolio
 import requests
 import json
+
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
 
 # 주식 현재가 조회 함수
 def get_current_stock_price(stock_code):
@@ -104,3 +108,32 @@ def trade(request):
     # GET 요청 시 포트폴리오 보여주기
     portfolios = StockPortfolio.objects.all()
     return render(request, "users/trade.html", {"portfolios": portfolios})
+
+
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+
+from .models import StockPortfolio  # 사용자와 주식 포트폴리오 모델 임포트
+from users.models import User
+from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화기
+
+class PortfolioView(APIView):
+    """사용자 포트폴리오 조회 API"""
+
+    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+
+    def get(self, request, user_id):  # request와 user_id를 받는 방식으로 수정
+        # 사용자 확인
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({"error": "사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 사용자와 관련된 주식 포트폴리오 정보 가져오기
+        stock_portfolio = StockPortfolio.objects.filter(user=user)  # 사용자와 연결된 포트폴리오 데이터 가져오기
+        
+        # 포트폴리오 정보 직렬화
+        stock_portfolio_data = StockPortfolioSerializer(stock_portfolio, many=True).data
+        
+        # 포트폴리오 반환
+        return Response({"portfolio": stock_portfolio_data}, status=status.HTTP_200_OK)

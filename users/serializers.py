@@ -106,3 +106,11 @@ class UserLoginSerializer(serializers.Serializer):
                 "details": str(e)
             })
         return {'email': user.email, 'token': jwt_token}
+
+from rest_framework import serializers
+from .models import User  
+
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['email', 'nickname', 'gender', 'birthdate', 'address', 'balance']  # balance 포함

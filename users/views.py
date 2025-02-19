@@ -231,3 +231,24 @@ def logout_view(request):
             status=405
         )
 
+#계좌 정보 가져오기
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .serializers import AccountSerializer  
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_account(request):
+    """현재 로그인한 사용자의 닉네임과 잔액 정보를 반환"""
+    try:
+        # 로그인한 사용자 정보 조회 및 직렬화
+        user_data = AccountSerializer(request.user).data
+
+        # 사용자 정보와 잔액 정보를 함께 반환
+        return Response({"user": user_data})
+
+    except Exception as e:
+        # 예외 처리
+        return Response({"error": str(e)}, status=500)
+

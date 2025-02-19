@@ -41,8 +41,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     birthdate = models.DateField(null=True, blank=True)
     address = models.CharField(max_length=100, blank=True)
 
+    balance = models.DecimalField(max_digits=15, decimal_places=2, default=1000000.00)
+
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
