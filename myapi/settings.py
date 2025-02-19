@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'doodook',
     'users',
     'trading.apps.TradingConfig',
+    'stocks',
     # 'corsheaders',
 ]+ THIRD_PARTIES
 

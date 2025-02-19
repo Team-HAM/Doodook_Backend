@@ -40,5 +40,5 @@ urlpatterns = [
     path('trading/', include('trading.urls')),
 
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-
+    path('stocks/', include('stocks.urls')),  # stocks 앱의 URL 포함
 ]
