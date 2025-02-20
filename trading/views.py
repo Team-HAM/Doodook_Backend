@@ -72,42 +72,78 @@ def stock_price(request):
     return JsonResponse({"stock_code": stock_code, "current_price": current_price})
 
 # 거래 처리 뷰
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import api_view, permission_classes
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def trade(request):
-    if request.method == "POST":
-        action = request.POST.get("action")
-        stock_code = request.POST.get("stock_code")
-        quantity = int(request.POST.get("quantity"))
-        price = int(request.POST.get("price"))
-        
-        # 주식 현재가 가져오기
-        current_price = get_current_stock_price(stock_code)
+    user = request.user  # 현재 로그인한 사용자
 
-        if current_price is None:
-            return JsonResponse({"error": "주식 가격을 가져올 수 없습니다."}, status=500)
+    # 요청 데이터 파싱
+    stock_symbol = request.data.get("stock_symbol")
+    order_type = request.data.get("order_type")
+    quantity = request.data.get("quantity")
+    price = request.data.get("price")
 
-        # 매수/매도 조건 체크
-        if (action == "buy" and price >= current_price) or (action == "sell" and price <= current_price):
-            portfolio, created = StockPortfolio.objects.get_or_create(stock_code=stock_code)
-            if action == "buy":
-                portfolio.quantity += quantity
-                portfolio.price = price
-                portfolio.save()
-                response = f"매수 주문 완료: {quantity}주 {stock_code}를 {price}에 매수."
-            elif action == "sell":
-                if portfolio and portfolio.quantity >= quantity:
-                    portfolio.quantity -= quantity
-                    portfolio.save()
-                    response = f"매도 주문 완료: {quantity}주 {stock_code}를 {price}에 매도."
-                else:
-                    response = "매도할 주식이 부족하거나 존재하지 않습니다."
-        else:
-            response = "현재가 조건을 만족하지 않아 주문이 실행되지 않았습니다."
-        
-        return JsonResponse({"message": response})
+    # 주식 가격 가져오기
+    current_price = get_current_stock_price(stock_symbol)
+    if current_price is None:
+        return JsonResponse({"error": "주식 가격을 가져올 수 없습니다."}, status=500)
+
+    # 현재 가격 확인
+    if order_type == "buy" and price < current_price:
+        return JsonResponse({"error": f"매수 가격은 현재가 ({current_price}원)보다 높거나 같아야 합니다."}, status=400)
+
+    if order_type == "sell" and price > current_price:
+        return JsonResponse({"error": f"매도 가격은 현재가 ({current_price}원)보다 낮거나 같아야 합니다."}, status=400)
+
+    # 사용자별 포트폴리오 가져오기 (없으면 생성)
+    portfolio, created = StockPortfolio.objects.get_or_create(user=user, stock_code=stock_symbol)
+
+    if order_type == "buy":
+        total_cost = quantity * price
+
+        # 잔고 확인
+        if user.balance < total_cost:
+            return JsonResponse({"error": "잔고가 부족합니다."}, status=400)
+
+        # 잔고 차감 및 포트폴리오 갱신
+        user.balance -= total_cost
+        user.save()
+
+        portfolio.quantity += quantity
+        portfolio.price = price  # 마지막 거래 가격 업데이트
+        portfolio.save()
+
+        response = f"{stock_symbol} {quantity}주 매수 완료 ({price}원)"
     
-    # GET 요청 시 포트폴리오 보여주기
-    portfolios = StockPortfolio.objects.all()
-    return render(request, "users/trade.html", {"portfolios": portfolios})
+    elif order_type == "sell":
+        # 보유 주식 수량 확인
+        if portfolio.quantity < quantity:
+            return JsonResponse({"error": "보유 수량 부족"}, status=400)
+
+        total_earnings = quantity * price
+
+        # 포트폴리오 업데이트
+        portfolio.quantity -= quantity
+
+        # 수량이 0이면 포트폴리오 삭제
+        if portfolio.quantity == 0:
+            portfolio.delete()
+        else:
+            portfolio.save()
+
+        # 잔고 업데이트
+        user.balance += total_earnings
+        user.save()
+
+        response = f"{stock_symbol} {quantity}주 매도 완료 ({price}원)"
+
+    else:
+        return JsonResponse({"error": "잘못된 요청입니다."}, status=400)
+
+    return JsonResponse({"message": response})
+
 
 
 from rest_framework.response import Response
