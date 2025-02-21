@@ -41,6 +41,13 @@ from django.http import JsonResponse
 #CRSF 비활성화
 from django.views.decorators.csrf import csrf_exempt
 
+# 공통 오류 응답 함수
+def error_response(message, code):
+    return JsonResponse({
+        "status": "error",
+        "message": message,
+        "code": code
+    }, status=code)
 
 User = get_user_model()
 
@@ -237,18 +244,29 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .serializers import AccountSerializer  
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])  # 인증된 사용자만 접근 가능
 def get_user_account(request):
     """현재 로그인한 사용자의 닉네임과 잔액 정보를 반환"""
     try:
+        # 사용자 인증 여부 확인
+        if not request.user.is_authenticated:
+            return error_response("인증이 필요합니다.", 401)
+        
         # 로그인한 사용자 정보 조회 및 직렬화
         user_data = AccountSerializer(request.user).data
 
         # 사용자 정보와 잔액 정보를 함께 반환
-        return Response({"user": user_data})
+        return JsonResponse({
+            "status": "success",
+            "data": user_data
+        }, status=200)
+
+    except User.DoesNotExist:
+        # 사용자가 존재하지 않을 경우
+        return error_response("사용자를 찾을 수 없습니다.", 404)
 
     except Exception as e:
-        # 예외 처리
-        return Response({"error": str(e)}, status=500)
+        # 일반적인 예외 처리 (서버 내부 오류)
+        return error_response(str(e), 500)
 
