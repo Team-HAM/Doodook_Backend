@@ -10,6 +10,14 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
+# 공통 오류 응답 함수
+def error_response(message, code):
+    return JsonResponse({
+        "status": "error",
+        "message": message,
+        "code": code
+    }, status=code)
+
 # 주식 현재가 조회 함수
 def get_current_stock_price(stock_code):
     # Access Token 확인
@@ -57,19 +65,24 @@ def get_current_stock_price(stock_code):
     except requests.exceptions.RequestException:
         return None  # API 요청 실패시 None 반환
 
+
 # 주식 가격 조회 뷰
 def stock_price(request):
-    stock_code = request.GET.get('stock_code', '')  # 쿼리 파라미터로 주식 코드 받기 (기본값은 빈 문자열)
+    stock_code = request.GET.get('stock_code', '').strip()  # 공백 제거
 
     if not stock_code:
-        return JsonResponse({"error": "주식 코드가 필요합니다."}, status=400)
+        return error_response("유효하지 않은 요청 매개변수입니다.", 400)
 
     current_price = get_current_stock_price(stock_code)
 
     if current_price is None:
-        return JsonResponse({"error": "주식 가격을 가져올 수 없습니다."}, status=500)
+        return error_response("주식 가격을 가져올 수 없습니다.", 500)
 
-    return JsonResponse({"stock_code": stock_code, "current_price": current_price})
+    return JsonResponse({
+        "status": "success",
+        "stock_code": stock_code,
+        "current_price": current_price
+    })
 
 # 거래 처리 뷰
 from rest_framework.permissions import IsAuthenticated
@@ -85,17 +98,20 @@ def trade(request):
     quantity = request.data.get("quantity")
     price = request.data.get("price")
 
+    if not stock_symbol or not order_type or quantity is None or price is None:
+        return error_response("유효하지 않은 요청 매개변수입니다.", 400)
+
     # 주식 가격 가져오기
     current_price = get_current_stock_price(stock_symbol)
     if current_price is None:
-        return JsonResponse({"error": "주식 가격을 가져올 수 없습니다."}, status=500)
+        return error_response("주식 가격을 가져올 수 없습니다.", 500)
 
     # 현재 가격 확인
     if order_type == "buy" and price < current_price:
-        return JsonResponse({"error": f"매수 가격은 현재가 ({current_price}원)보다 높거나 같아야 합니다."}, status=400)
+        return error_response(f"매수 가격은 현재가 ({current_price}원)보다 높거나 같아야 합니다.", 400)
 
     if order_type == "sell" and price > current_price:
-        return JsonResponse({"error": f"매도 가격은 현재가 ({current_price}원)보다 낮거나 같아야 합니다."}, status=400)
+        return error_response(f"매도 가격은 현재가 ({current_price}원)보다 낮거나 같아야 합니다.", 400)
 
     # 사용자별 포트폴리오 가져오기 (없으면 생성)
     portfolio, created = StockPortfolio.objects.get_or_create(user=user, stock_code=stock_symbol)
@@ -105,7 +121,7 @@ def trade(request):
 
         # 잔고 확인
         if user.balance < total_cost:
-            return JsonResponse({"error": "잔고가 부족합니다."}, status=400)
+            return error_response("잔고가 부족합니다.", 400)
 
         # 잔고 차감 및 포트폴리오 갱신
         user.balance -= total_cost
@@ -120,7 +136,7 @@ def trade(request):
     elif order_type == "sell":
         # 보유 주식 수량 확인
         if portfolio.quantity < quantity:
-            return JsonResponse({"error": "보유 수량 부족"}, status=400)
+            return error_response("보유 수량이 부족합니다.", 400)
 
         total_earnings = quantity * price
 
@@ -140,11 +156,12 @@ def trade(request):
         response = f"{stock_symbol} {quantity}주 매도 완료 ({price}원)"
 
     else:
-        return JsonResponse({"error": "잘못된 요청입니다."}, status=400)
+        return error_response("잘못된 요청입니다.", 400)
 
-    return JsonResponse({"message": response})
-
-
+    return JsonResponse({
+        "status": "success",
+        "message": response
+    })
 
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -158,32 +175,32 @@ class PortfolioView(APIView):
     
     permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
 
-    def get(self, request, user_id):  # request와 user_id를 받는 방식으로 수정
+    def get(self, request, user_id):
         # 사용자 확인
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response({"error": "사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return error_response("사용자를 찾을 수 없습니다.", 404)
         
         # 사용자와 관련된 주식 포트폴리오 정보 가져오기
         stock_portfolio = StockPortfolio.objects.filter(user=user)
         
         if not stock_portfolio.exists():
-            return Response({"error": "포트폴리오가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return error_response("포트폴리오가 존재하지 않습니다.", 404)
         
         # 각 주식의 현재 가격을 가져와 수익률 계산
         portfolio_data = []
         for stock in stock_portfolio:
             current_price = get_current_stock_price(stock.stock_code)
             if current_price is None:
-                return Response({"error": f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return error_response(f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다.", 500)
 
             # 평균 매수가 계산
             if stock.quantity > 0:
                 average_price = stock.price / stock.quantity  # 평균 매수가 계산
                 profit_rate = ((current_price - average_price) / average_price) * 100
             else:
-                return Response({"error": "보유 수량이 0입니다."}, status=status.HTTP_400_BAD_REQUEST)
+                return error_response("보유 수량이 0입니다.", 400)
 
             portfolio_data.append({
                 "stock_code": stock.stock_code,
@@ -193,4 +210,7 @@ class PortfolioView(APIView):
                 "profit_rate": profit_rate
             })
         
-        return Response({"portfolio": portfolio_data}, status=status.HTTP_200_OK)
+        return Response({
+            "status": "success",
+            "portfolio": portfolio_data
+        }, status=status.HTTP_200_OK)

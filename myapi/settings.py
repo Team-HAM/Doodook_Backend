@@ -34,8 +34,8 @@ environ.Env.read_env(os.path.join(BASE_DIR,'.env'))
 SECRET_KEY=env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG=env('DEBUG')
-DEBUG=False
+DEBUG=env('DEBUG')
+# DEBUG=False
 # ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 ALLOWED_HOSTS=['*'] #개발환경 시 활성화가 편함함
@@ -112,30 +112,30 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 
 import pymysql
 pymysql.install_as_MySQLdb()
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD' : env("DB_PASSWORD"),
-        'HOST' : env("DB_HOST"),
-        'PORT' : env("DB_PORT"),
-    }
-}
-
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'doodook_db',
-#         'USER': 'ham22',
-#         'PASSWORD' : '',
-#         'HOST' : 'svc.sel4.cloudtype.app',
-#         'PORT' : '30898',
-#         'OPTIONS':{
-#             'init_command' : "SET sql_mode = 'STRICT_TRANS_TABLES'"
-#         }
+#         'NAME': env("DB_NAME"),
+#         'USER': env("DB_USER"),
+#         'PASSWORD' : env("DB_PASSWORD"),
+#         'HOST' : env("DB_HOST"),
+#         'PORT' : env("DB_PORT"),
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'doodook_db',
+        'USER': 'ham22',
+        'PASSWORD' : 'ham22',
+        'HOST' : 'svc.sel4.cloudtype.app',
+        'PORT' : '30898',
+        'OPTIONS':{
+            'init_command' : "SET sql_mode = 'STRICT_TRANS_TABLES'"
+        }
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
