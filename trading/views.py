@@ -168,24 +168,27 @@ class PortfolioView(APIView):
         # 사용자와 관련된 주식 포트폴리오 정보 가져오기
         stock_portfolio = StockPortfolio.objects.filter(user=user)
         
+        if not stock_portfolio.exists():
+            return Response({"error": "포트폴리오가 존재하지 않습니다."}, status=status.HTTP_404_NOT_FOUND)
+        
         # 각 주식의 현재 가격을 가져와 수익률 계산
         portfolio_data = []
         for stock in stock_portfolio:
             current_price = get_current_stock_price(stock.stock_code)
-            if current_price:
-                # 평균 매수가 계산
-                if stock.quantity > 0:
-                    average_price = stock.price / stock.quantity  # 평균 매수가 계산
-                    profit_rate = ((current_price - average_price) / average_price) * 100
-                else:
-                    profit_rate = None
+            if current_price is None:
+                return Response({"error": f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            # 평균 매수가 계산
+            if stock.quantity > 0:
+                average_price = stock.price / stock.quantity  # 평균 매수가 계산
+                profit_rate = ((current_price - average_price) / average_price) * 100
             else:
-                profit_rate = None
+                return Response({"error": "보유 수량이 0입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
             portfolio_data.append({
                 "stock_code": stock.stock_code,
                 "quantity": stock.quantity,
-                "average_price": average_price if stock.quantity > 0 else None,
+                "average_price": average_price,
                 "current_price": current_price,
                 "profit_rate": profit_rate
             })
