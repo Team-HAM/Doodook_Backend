@@ -114,19 +114,3 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['email', 'nickname', 'gender', 'birthdate', 'address', 'balance']  # balance 포함
-
-#비밀번호 변경
-from rest_framework import serializers
-from django.contrib.auth.hashers import check_password
-
-class ChangePasswordSerializer(serializers.Serializer):
-    current_password = serializers.CharField(write_only=True)
-    new_password = serializers.CharField(write_only=True)
-
-    def validate_current_password(self, value):
-        """ 현재 비밀번호가 맞는지 확인 """
-        user = self.context['request'].user
-        if not check_password(value, user.password):
-            raise serializers.ValidationError("현재 비밀번호가 올바르지 않습니다.")
-        return value
-
