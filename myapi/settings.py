@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import environ
 
-#SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
+SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
 
 
 
@@ -40,9 +40,20 @@ DEBUG=False
 
 ALLOWED_HOSTS=['*'] #개발환경 시 활성화가 편함함
 
-# Application definition
+CORS_ORIGIN_ALLOW_ALL=True
+CORS_ALLOW_CREDENTIALS=True
 
+# Application definition
+THIRD_PARTIES = [
+    'rest_framework',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
+]
 INSTALLED_APPS = [
+    # 'django_extensions',
+    'trade_hantu.apps.TradeHantuConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,8 +62,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'doodook',
     'users',
-    'rest_framework',
-]
+    'trading.apps.TradingConfig',
+    'stocks',
+    # 'corsheaders',
+]+ THIRD_PARTIES
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', ## 이거 추가!! 위치 중요!!!
@@ -90,13 +103,39 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+import pymysql
+pymysql.install_as_MySQLdb()
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': env("DB_NAME"),
+        'USER': env("DB_USER"),
+        'PASSWORD' : env("DB_PASSWORD"),
+        'HOST' : env("DB_HOST"),
+        'PORT' : env("DB_PORT"),
     }
 }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'doodook_db',
+#         'USER': 'ham22',
+#         'PASSWORD' : '',
+#         'HOST' : 'svc.sel4.cloudtype.app',
+#         'PORT' : '30898',
+#         'OPTIONS':{
+#             'init_command' : "SET sql_mode = 'STRICT_TRANS_TABLES'"
+#         }
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -142,12 +181,12 @@ STATIC_ROOT=os.path.join(BASE_DIR,'staticfiles')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# login
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated",],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
+        #"rest_framework.authentication.SessionAuthentication",
     ],
 }
 
@@ -170,3 +209,13 @@ EMAIL_HOST_USER=env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD=env('EMAIL_HOST_PASSWORD')
 SERVER_EMAIL = EMAIL_HOST_USER
 DEFAULT_FROM_MAIL = EMAIL_HOST_USER
+
+
+# BASE_DIR = Path(__file__).resolve().parent.parent
+
+HANTU_API_APP_KEY = env("HANTU_API_APP_KEY")
+HANTU_API_APP_SECRET= env("HANTU_API_APP_SECRET")
+
+
+# 추가: 한국투자증권 설정
+# KIS_CONFIG_PATH = os.path.join(BASE_DIR, 'config', 'kis_devlp.yaml')

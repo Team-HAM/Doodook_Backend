@@ -41,6 +41,13 @@ from django.http import JsonResponse
 #CRSF 비활성화
 from django.views.decorators.csrf import csrf_exempt
 
+# 공통 오류 응답 함수
+def error_response(message, code):
+    return JsonResponse({
+        "status": "error",
+        "message": message,
+        "code": code
+    }, status=code)
 
 User = get_user_model()
 
@@ -231,3 +238,157 @@ def logout_view(request):
             status=405
         )
 
+#계좌 정보 가져오기
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from .serializers import AccountSerializer  
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])  # 인증된 사용자만 접근 가능
+def get_user_account(request):
+    """현재 로그인한 사용자의 닉네임과 잔액 정보를 반환"""
+    try:
+        # 사용자 인증 여부 확인
+        if not request.user.is_authenticated:
+            return error_response("인증이 필요합니다.", 401)
+        
+        # 로그인한 사용자 정보 조회 및 직렬화
+        user_data = AccountSerializer(request.user).data
+
+        # 사용자 정보와 잔액 정보를 함께 반환
+        return JsonResponse({
+            "status": "success",
+            "data": user_data
+        }, status=200)
+
+    except User.DoesNotExist:
+        # 사용자가 존재하지 않을 경우
+        return error_response("사용자를 찾을 수 없습니다.", 404)
+
+    except Exception as e:
+        # 일반적인 예외 처리 (서버 내부 오류)
+        return error_response(str(e), 500)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+class UserDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request):
+        try:
+            user = request.user  # 로그인한 사용자
+            user.delete()  # 사용자 삭제
+            return Response({
+                "status": "success",
+                "message": "회원탈퇴가 완료되었습니다."
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "status": "error",
+                "message": "회원탈퇴 처리 중 오류가 발생했습니다.",
+                "error": str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+#비밀번호 변경
+from rest_framework.generics import UpdateAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import ChangePasswordSerializer
+
+class ChangePasswordView(UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        
+        if not request.data.get("new_password"):
+            return error_response("새 비밀번호를 입력하세요.", 400)
+
+        if serializer.is_valid():
+            user = request.user
+            
+            if user.check_password(serializer.validated_data["new_password"]):
+                return error_response("이전과 동일한 비밀번호로 변경할 수 없습니다.", 400)
+            
+            user.set_password(serializer.validated_data['new_password'])  # 비밀번호 변경
+            user.save()
+            return Response({
+                "status": "success",
+                "message": "비밀번호가 성공적으로 변경되었습니다."
+            }, status=status.HTTP_200_OK)
+        
+        return error_response("비밀번호 형식이 올바르지 않습니다.", 400)
+    
+#비밀번호 재설정
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.core.mail import EmailMessage
+from django.contrib.auth.tokens import default_token_generator
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+
+        if not email:
+            return error_response("이메일을 입력하세요.", 400)
+
+        try:
+            user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            return error_response("해당 이메일로 가입된 사용자가 없습니다.", 404)
+        
+        # 이메일에 포함할 토큰 생성
+        token = default_token_generator.make_token(user)
+        reset_url = f"{settings.SITE_URL}/users/password-reset/confirm/?token={token}"
+
+        # 이메일 내용
+        subject = "[YourApp] 비밀번호 재설정 요청"
+        message = f"비밀번호 재설정을 위해 아래 링크를 클릭하세요: {reset_url}"
+
+        # 이메일 전송
+        email_message = EmailMessage(subject, message, to=[email])
+        email_message.send()
+
+        return Response({
+            "status": "success",
+            "message": "비밀번호 재설정 링크를 이메일로 발송했습니다."
+        }, status=status.HTTP_200_OK)
+
+# 비밀번호 재설정 확인
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        token = request.data.get('reset_token')
+        new_password = request.data.get('new_password')
+
+        if not email or not token or not new_password:
+            return error_response("이메일, 토큰, 새 비밀번호를 입력하세요.", 400)
+
+        try:
+            user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            return error_response("해당 이메일로 가입된 사용자가 없습니다.", 404)
+
+        if not default_token_generator.check_token(user, token):
+            return error_response("유효하지 않은 인증 토큰입니다.", 400)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({
+            "status": "success",
+            "message": "비밀번호가 성공적으로 변경되었습니다."
+        }, status=status.HTTP_200_OK)

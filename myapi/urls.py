@@ -17,12 +17,12 @@ Including another URLconf
 from django.urls import path, include
 from django.contrib import admin
 from users import views
-
+from rest_framework_simplejwt.views import TokenObtainPairView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('doodook/', include('doodook.urls')),
-    path('users', views.SignupView.as_view(), name='signup'),  # POST (회원가입입)
-    path('sessions', views.Login, name='login'),  # POST (로그인)
+    path('users/', views.SignupView.as_view(), name='signup'),  # POST (회원가입입)
+    path('sessions/', views.Login, name='login'),  # POST (로그인)
     path('users/<int:id>/activation', views.UserActivateView.as_view(), name='activation'),  # GET (인증증)
 
     # path("signup/", views.SignupView.as_view()), ->기존 signup url
@@ -32,7 +32,13 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
 
     # path('activate/<str:uid>/<str:token>',views.UserActivateView.as_view(), name ='activate'),->기존 인증 url
-
+    path('users/', include('users.urls')),  # 'users' 앱의 URL을 포함
     path("<int:pk>/", views.user_detail),
     path("me/", views.MeView.as_view()),
+
+    path("trade_hantu/", include("trade_hantu.urls")),
+    path('trading/', include('trading.urls')),
+
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('stocks/', include('stocks.urls')),  # stocks 앱의 URL 포함
 ]
