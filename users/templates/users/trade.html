@@ -1,0 +1,37 @@
+<!-- trade.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>주식 거래 시뮬레이션</title>
+</head>
+<body>
+    <h1>주식 거래 시뮬레이션</h1>
+
+    <!-- 거래 폼 -->
+    <form method="POST">
+        {% csrf_token %}
+        <label for="action">Action (buy/sell):</label>
+        <input type="text" id="action" name="action" required>
+        
+        <label for="stock_code">주식 코드:</label>
+        <input type="text" id="stock_code" name="stock_code" required>
+
+        <label for="quantity">수량:</label>
+        <input type="number" id="quantity" name="quantity" required>
+
+        <label for="price">가격:</label>
+        <input type="number" id="price" name="price" required>
+
+        <button type="submit">주문</button>
+    </form>
+
+    <!-- 보유한 주식 내역 -->
+    <h2>보유한 주식 내역</h2>
+    <ul>
+        {% for portfolio in portfolios %}
+            <li>{{ portfolio.stock_code }}: {{ portfolio.quantity }}주, 가격: {{ portfolio.price }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
