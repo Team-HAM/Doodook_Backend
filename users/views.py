@@ -1,7 +1,6 @@
 from django.shortcuts import render
 from rest_framework.generics import CreateAPIView
 from django.contrib.auth import get_user_model
-from users.models import Account
 from users.serializers import UserSerializer
 from rest_framework.permissions import AllowAny
 
@@ -42,6 +41,13 @@ from django.http import JsonResponse
 #CRSF 비활성화
 from django.views.decorators.csrf import csrf_exempt
 
+# 공통 오류 응답 함수
+def error_response(message, code):
+    return JsonResponse({
+        "status": "error",
+        "message": message,
+        "code": code
+    }, status=code)
 
 User = get_user_model()
 
@@ -87,50 +93,28 @@ class SignupView(CreateAPIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
-from rest_framework import status
-from .serializers import UserLoginSerializer
-from .utils import create_jwt_token  # create_jwt_token을 추가로 임포트합니다.
-from django.contrib.auth import authenticate
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def Login(request):
     if request.method == 'POST':
-        # 사용자가 보낸 데이터로 시리얼라이저 생성
         serializer = UserLoginSerializer(data=request.data)
 
-        # 시리얼라이저 검증
         if serializer.is_valid():
-            # 이메일과 비밀번호를 사용하여 사용자 인증
-            email = serializer.validated_data['email']
-            password = serializer.validated_data['password']
-
-            # 인증을 시도
-            user = authenticate(request, username=email, password=password)
-
-            if user is None:
+            if serializer.validated_data['email'] == "None":
                 return Response({
                     "status": "error",
                     "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
                     "code": 401
                 }, status=status.HTTP_401_UNAUTHORIZED)
-            
-            # 로그인 성공, JWT 토큰 생성
-            token = create_jwt_token(user)
-
             response = {
                 "status": "success",
                 "message": "로그인 성공",
                 "data": {
-                    "token": token  # 생성된 토큰을 응답 데이터로 반환
+                    "token": serializer.data['token']
                 }
             }
             return Response(response, status=status.HTTP_200_OK)
-
-        # 유효하지 않은 요청인 경우
         return Response({
             "status": "error",
             "message": "유효하지 않은 요청입니다.",
@@ -138,6 +122,7 @@ def Login(request):
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
+    
 # User Activation View
 class UserActivateView(APIView):
     permission_classes = [AllowAny]  # 누구나 접근 가능
@@ -252,46 +237,38 @@ def logout_view(request):
             },
             status=405
         )
-    
-    
+
 #계좌 정보 가져오기
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .serializers import UserSerializer, AccountSerializer
-from .models import Account
+from .serializers import AccountSerializer  
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])  # 인증된 사용자만 접근 가능
 def get_user_account(request):
-    """현재 로그인한 사용자의 닉네임과 계좌 정보를 반환"""
+    """현재 로그인한 사용자의 닉네임과 잔액 정보를 반환"""
     try:
-        # 로그인한 사용자 정보 조회
-        user = request.user
+        # 사용자 인증 여부 확인
+        if not request.user.is_authenticated:
+            return error_response("인증이 필요합니다.", 401)
         
-        # UserSerializer를 사용하여 사용자 정보 직렬화
-        user_data = UserSerializer(user).data
-        
-        # 로그인한 사용자의 계좌 정보 조회
-        account = Account.objects.get(user=user)
-        
-        # AccountSerializer를 사용하여 계좌 정보 직렬화
-        account_data = AccountSerializer(account).data
-        
-        # 사용자 정보와 계좌 정보를 함께 반환
-        return Response({
-            "user": user_data,
-            "account": account_data
-        })
+        # 로그인한 사용자 정보 조회 및 직렬화
+        user_data = AccountSerializer(request.user).data
 
-    except Account.DoesNotExist:
-        # 계좌 정보가 없는 경우 처리
-        return Response({"error": "계좌 정보가 없습니다."}, status=404)
+        # 사용자 정보와 잔액 정보를 함께 반환
+        return JsonResponse({
+            "status": "success",
+            "data": user_data
+        }, status=200)
+
+    except User.DoesNotExist:
+        # 사용자가 존재하지 않을 경우
+        return error_response("사용자를 찾을 수 없습니다.", 404)
+
     except Exception as e:
-        # 다른 예외 처리
-        return Response({"error": str(e)}, status=500)
-
-
+        # 일반적인 예외 처리 (서버 내부 오류)
+        return error_response(str(e), 500)
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -318,3 +295,100 @@ class UserDeleteView(APIView):
                 "message": "회원탈퇴 처리 중 오류가 발생했습니다.",
                 "error": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+#비밀번호 변경
+from rest_framework.generics import UpdateAPIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import ChangePasswordSerializer
+
+class ChangePasswordView(UpdateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, context={'request': request})
+        
+        if not request.data.get("new_password"):
+            return error_response("새 비밀번호를 입력하세요.", 400)
+
+        if serializer.is_valid():
+            user = request.user
+            
+            if user.check_password(serializer.validated_data["new_password"]):
+                return error_response("이전과 동일한 비밀번호로 변경할 수 없습니다.", 400)
+            
+            user.set_password(serializer.validated_data['new_password'])  # 비밀번호 변경
+            user.save()
+            return Response({
+                "status": "success",
+                "message": "비밀번호가 성공적으로 변경되었습니다."
+            }, status=status.HTTP_200_OK)
+        
+        return error_response("비밀번호 형식이 올바르지 않습니다.", 400)
+    
+#비밀번호 재설정
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.core.mail import EmailMessage
+from django.contrib.auth.tokens import default_token_generator
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+
+        if not email:
+            return error_response("이메일을 입력하세요.", 400)
+
+        try:
+            user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            return error_response("해당 이메일로 가입된 사용자가 없습니다.", 404)
+        
+        # 이메일에 포함할 토큰 생성
+        token = default_token_generator.make_token(user)
+        reset_url = f"{settings.SITE_URL}/users/password-reset/confirm/?token={token}"
+
+        # 이메일 내용
+        subject = "[YourApp] 비밀번호 재설정 요청"
+        message = f"비밀번호 재설정을 위해 아래 링크를 클릭하세요: {reset_url}"
+
+        # 이메일 전송
+        email_message = EmailMessage(subject, message, to=[email])
+        email_message.send()
+
+        return Response({
+            "status": "success",
+            "message": "비밀번호 재설정 링크를 이메일로 발송했습니다."
+        }, status=status.HTTP_200_OK)
+
+# 비밀번호 재설정 확인
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get('email')
+        token = request.data.get('reset_token')
+        new_password = request.data.get('new_password')
+
+        if not email or not token or not new_password:
+            return error_response("이메일, 토큰, 새 비밀번호를 입력하세요.", 400)
+
+        try:
+            user = get_user_model().objects.get(email=email)
+        except get_user_model().DoesNotExist:
+            return error_response("해당 이메일로 가입된 사용자가 없습니다.", 404)
+
+        if not default_token_generator.check_token(user, token):
+            return error_response("유효하지 않은 인증 토큰입니다.", 400)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({
+            "status": "success",
+            "message": "비밀번호가 성공적으로 변경되었습니다."
+        }, status=status.HTTP_200_OK)
