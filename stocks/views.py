@@ -90,12 +90,14 @@ class DailyStockPriceView(APIView):
                     "open": int(item["stck_oprc"]),
                     "high": int(item["stck_hgpr"]),
                     "low": int(item["stck_lwpr"]),
-                    "close": int(item["stck_clpr"]),  # 수정: current_close 대신 item에서 직접 값을 가져옴
-                    "volume": int(item["acml_vol"]),  # 수정: 중복 제거
-                    "price_change": price_change,  # 전일 대비 변화값 (절대값)
-                    "price_change_percentage": price_change_percentage,  # 전일 대비 변화율 (%)
-                    "change_status": change_status  # 상승/하락/변동없음 상태
-                })  # 수정: 닫는 중괄호 추가
+                    "close": current_close,
+                    "volume": int(item["acml_vol"]),
+                    "price_change": price_change,  #✅ 전일 대비 변화값 (절대값)
+                    "price_change_percentage": price_change_percentage,  #✅ 전일 대비 변화율 (%)
+                    "change_status": change_status,  #✅ 상승/하락/변동없음 상태
+                    "close": int(item["stck_clpr"]),
+                    "volume": int(item["acml_vol"])
+                })  # 여기에 필요한 닫는 중괄호 추가
 
             return Response(
                 {
@@ -104,9 +106,10 @@ class DailyStockPriceView(APIView):
                     "start_date": start_date,
                     "end_date": end_date,
                     "chart_data": chart_data
-                },
+                }, 
                 status=status.HTTP_200_OK
-            )  # 수정: 닫는 괄호 추가
+            )  # 함수 호출 끝에 필요한 닫는 괄호 추가
+
 
         except Exception as e:
             # ✅ 500 오류: 서버 예외 처리
