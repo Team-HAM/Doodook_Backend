@@ -54,3 +54,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
+#비밀번호 재설정
+from django.db import models
+
+class PasswordResetToken(models.Model):
+    email = models.EmailField(unique=True)
+    token = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.email} - {self.token}"
+
