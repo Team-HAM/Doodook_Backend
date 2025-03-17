@@ -129,3 +129,4 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not check_password(value, user.password):
             raise serializers.ValidationError("현재 비밀번호가 올바르지 않습니다.")
         return value
+

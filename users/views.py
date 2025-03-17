@@ -294,6 +294,7 @@ class UserDeleteView(APIView):
                 "status": "error",
                 "message": "회원탈퇴 처리 중 오류가 발생했습니다.",
                 "error": str(e)
+
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 #비밀번호 변경
@@ -392,3 +393,4 @@ class PasswordResetConfirmView(APIView):
             "status": "success",
             "message": "비밀번호가 성공적으로 변경되었습니다."
         }, status=status.HTTP_200_OK)
+
