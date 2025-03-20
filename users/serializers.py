@@ -78,34 +78,34 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
-class UserLoginSerializer(serializers.Serializer):
-    email = serializers.CharField(max_length=64)
-    password = serializers.CharField(max_length=128, write_only=True)
-    token = serializers.CharField(max_length=255, read_only=True)
+# class UserLoginSerializer(serializers.Serializer):
+#     email = serializers.CharField(max_length=64)
+#     password = serializers.CharField(max_length=128, write_only=True)
+#     token = serializers.CharField(max_length=255, read_only=True)
 
-    def validate(self, data):
-        email = data.get("email", None)
-        password = data.get("password", None)
-        user = authenticate(email=email, password=password)
+#     def validate(self, data):
+#         email = data.get("email", None)
+#         password = data.get("password", None)
+#         user = authenticate(email=email, password=password)
 
-        if user is None:
-            raise serializers.ValidationError({
-                "status": "error",
-                "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
-                "code": 401
-            })
+#         if user is None:
+#             raise serializers.ValidationError({
+#                 "status": "error",
+#                 "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
+#                 "code": 401
+#             })
 
-        try:
-            jwt_token = generate_jwt_token(user)
-            update_last_login(None, user)
-        except Exception as e:
-            raise serializers.ValidationError({
-                "status": "error",
-                "message": "로그인 중 오류가 발생했습니다. 다시 시도해주세요.",
-                "code": 500,
-                "details": str(e)
-            })
-        return {'email': user.email, 'token': jwt_token}
+#         try:
+#             jwt_token = generate_jwt_token(user)
+#             update_last_login(None, user)
+#         except Exception as e:
+#             raise serializers.ValidationError({
+#                 "status": "error",
+#                 "message": "로그인 중 오류가 발생했습니다. 다시 시도해주세요.",
+#                 "code": 500,
+#                 "details": str(e)
+#             })
+#         return {'email': user.email, 'token': jwt_token}
 
 from rest_framework import serializers
 from .models import User  

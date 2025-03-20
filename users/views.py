@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from users.serializers import UserLoginSerializer
+# from users.serializers import UserLoginSerializer
 
 from rest_framework.views import APIView
 import traceback
@@ -22,7 +22,7 @@ from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes  # For @api_view and @permission_classes
 from rest_framework.response import Response  # For Response
 from rest_framework import status  # For status codes like status.HTTP_200_OK
-from .serializers import UserLoginSerializer  # Replace with the correct path if the serializer is in a different location
+# from .serializers import UserLoginSerializer  # Replace with the correct path if the serializer is in a different location
 
 from rest_framework.permissions import IsAdminUser
 
@@ -92,36 +92,56 @@ class SignupView(CreateAPIView):
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
-
-
+from django.contrib.auth.hashers import check_password   
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.models import update_last_login
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([])
 def Login(request):
-    if request.method == 'POST':
-        serializer = UserLoginSerializer(data=request.data)
+    email = request.data.get("email")
+    password = request.data.get("password")
 
-        if serializer.is_valid():
-            if serializer.validated_data['email'] == "None":
-                return Response({
-                    "status": "error",
-                    "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
-                    "code": 401
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            response = {
-                "status": "success",
-                "message": "로그인 성공",
-                "data": {
-                    "token": serializer.data['token']
-                }
-            }
-            return Response(response, status=status.HTTP_200_OK)
+    # 이메일로 사용자 조회
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
         return Response({
             "status": "error",
-            "message": "유효하지 않은 요청입니다.",
-            "code": 400,
-            "errors": serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+            "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
+            "code": 401
+        }, status=status.HTTP_401_UNAUTHORIZED)
 
+    # 비밀번호 확인 (authenticate() 대신 직접 체크)
+    if not check_password(password, user.password):
+        return Response({
+            "status": "error",
+            "message": "로그인 실패. 이메일 또는 비밀번호가 잘못되었습니다.",
+            "code": 401
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+    try:
+        # ✅ Simple JWT 방식으로 토큰 생성
+        refresh = RefreshToken.for_user(user)
+        access = str(refresh.access_token)
+        
+        update_last_login(None, user)  # 마지막 로그인 업데이트
+
+        return Response({
+            "status": "success",
+            "message": "로그인 성공",
+            "data": {
+                "access": access,
+                "refresh": str(refresh),
+            }
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "message": "로그인 중 오류가 발생했습니다. 다시 시도해주세요.",
+            "code": 500,
+            "details": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
 # User Activation View
 class UserActivateView(APIView):
