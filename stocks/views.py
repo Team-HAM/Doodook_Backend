@@ -66,11 +66,12 @@ class DailyStockPriceView(APIView):
             # ✅ 전일 대비 상승/하락 정보 추가 및 프론트에서 쉽게 사용할 수 있도록 데이터 변환
             # API 응답에서 날짜 기준으로 데이터 정렬 (최신 날짜가 먼저 오도록)
             sorted_daily_prices = sorted(daily_prices, key=lambda x: x["stck_bsop_date"], reverse=True)
-            
+
+            # ✅ 프론트에서 쉽게 사용할 수 있도록 데이터 변환
             chart_data = []
             for i, item in enumerate(sorted_daily_prices):
                 current_close = int(item["stck_clpr"])
-                
+
                 # 전일 데이터가 있는 경우에만 변동 계산
                 if i < len(daily_prices) - 1:
                     prev_close = int(daily_prices[i + 1]["stck_clpr"])
@@ -82,7 +83,8 @@ class DailyStockPriceView(APIView):
                     price_change = 0
                     price_change_percentage = 0
                     change_status = "unchanged"
-                
+
+            for item in daily_prices:
                 chart_data.append({
                     "date": datetime.strptime(item["stck_bsop_date"], "%Y%m%d").strftime("%Y-%m-%d"),
                     "open": int(item["stck_oprc"]),
@@ -90,10 +92,12 @@ class DailyStockPriceView(APIView):
                     "low": int(item["stck_lwpr"]),
                     "close": current_close,
                     "volume": int(item["acml_vol"]),
-                    "price_change": price_change,  # ✅ 전일 대비 변화값 (절대값)
-                    "price_change_percentage": price_change_percentage,  # ✅ 전일 대비 변화율 (%)
-                    "change_status": change_status  # ✅ 상승/하락/변동없음 상태
-                })
+                    "price_change": price_change,  #✅ 전일 대비 변화값 (절대값)
+                    "price_change_percentage": price_change_percentage,  #✅ 전일 대비 변화율 (%)
+                    "change_status": change_status,  #✅ 상승/하락/변동없음 상태
+                    "close": int(item["stck_clpr"]),
+                    "volume": int(item["acml_vol"])
+                })  # 여기에 필요한 닫는 중괄호 추가
 
             return Response(
                 {
@@ -104,7 +108,8 @@ class DailyStockPriceView(APIView):
                     "chart_data": chart_data
                 }, 
                 status=status.HTTP_200_OK
-            )
+            )  # 함수 호출 끝에 필요한 닫는 괄호 추가
+
 
         except Exception as e:
             # ✅ 500 오류: 서버 예외 처리
@@ -116,7 +121,7 @@ class DailyStockPriceView(APIView):
                 }, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
+
 class StockPriceChangeView(APIView):
     """✅ 주식 가격 전일 대비 변동 정보 조회 API"""
 

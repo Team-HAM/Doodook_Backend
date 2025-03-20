@@ -294,9 +294,8 @@ class UserDeleteView(APIView):
                 "status": "error",
                 "message": "회원탈퇴 처리 중 오류가 발생했습니다.",
                 "error": str(e)
-
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+
 #비밀번호 변경
 from rest_framework.generics import UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -310,25 +309,25 @@ class ChangePasswordView(UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data, context={'request': request})
-        
+
         if not request.data.get("new_password"):
             return error_response("새 비밀번호를 입력하세요.", 400)
 
         if serializer.is_valid():
             user = request.user
-            
+
             if user.check_password(serializer.validated_data["new_password"]):
                 return error_response("이전과 동일한 비밀번호로 변경할 수 없습니다.", 400)
-            
+
             user.set_password(serializer.validated_data['new_password'])  # 비밀번호 변경
             user.save()
             return Response({
                 "status": "success",
                 "message": "비밀번호가 성공적으로 변경되었습니다."
             }, status=status.HTTP_200_OK)
-        
+
         return error_response("비밀번호 형식이 올바르지 않습니다.", 400)
-    
+
 #비밀번호 재설정
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
@@ -349,7 +348,7 @@ class PasswordResetRequestView(APIView):
             user = get_user_model().objects.get(email=email)
         except get_user_model().DoesNotExist:
             return error_response("해당 이메일로 가입된 사용자가 없습니다.", 404)
-        
+
         # 이메일에 포함할 토큰 생성
         token = default_token_generator.make_token(user)
         reset_url = f"{settings.SITE_URL}/users/password-reset/confirm/?token={token}"
@@ -393,4 +392,3 @@ class PasswordResetConfirmView(APIView):
             "status": "success",
             "message": "비밀번호가 성공적으로 변경되었습니다."
         }, status=status.HTTP_200_OK)
-
