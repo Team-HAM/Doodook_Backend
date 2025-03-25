@@ -38,7 +38,9 @@ urlpatterns = [
 
     path("trade_hantu/", include("trade_hantu.urls")),
     path('trading/', include('trading.urls')),
+    
 
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('stocks/', include('stocks.urls')),  # stocks 앱의 URL 포함
+    path('mbti/', include('MBTI.urls'))
 ]
