@@ -165,7 +165,7 @@ def trade(request):
 
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from .models import StockTrade,StockPortfolio
 from .models import StockPortfolio  # 사용자와 주식 포트폴리오 모델 임포트
 from users.models import User
 from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화기
@@ -173,7 +173,7 @@ from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화�
 class PortfolioView(APIView):
     """사용자 포트폴리오 조회 API"""
     
-    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, user_id):
         # 사용자 확인
@@ -188,28 +188,39 @@ class PortfolioView(APIView):
         if not stock_portfolio.exists():
             return error_response("포트폴리오가 존재하지 않습니다.", 404)
         
-        # 각 주식의 현재 가격을 가져와 수익률 계산
         portfolio_data = []
         for stock in stock_portfolio:
-            current_price = get_current_stock_price(stock.stock_code)
-            if current_price is None:
+            try:
+                current_price = get_current_stock_price(stock.stock_code)
+                if current_price is None:
+                    raise ValueError(f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다.")
+            except Exception as e:
+                print(f"Error while fetching current price for {stock.stock_code}: {e}")
                 return error_response(f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다.", 500)
 
-            # 평균 매수가 계산
-            if stock.quantity > 0:
-                average_price = stock.price / stock.quantity  # 평균 매수가 계산
+            # 매수 거래만 필터링하여 평균 매수가 계산
+            trades = StockTrade.objects.filter(user=user, stock_code=stock.stock_code, trade_type="buy")
+            total_investment = sum(trade.price * trade.quantity for trade in trades)
+            total_quantity = sum(trade.quantity for trade in trades)
+
+            # 평균 가격 계산
+            if total_quantity > 0:
+                average_price = total_investment / total_quantity
                 profit_rate = ((current_price - average_price) / average_price) * 100
             else:
-                return error_response("보유 수량이 0입니다.", 400)
+                average_price = 0
+                profit_rate = 0
 
+            # 데이터 구조화
             portfolio_data.append({
                 "stock_code": stock.stock_code,
-                "quantity": stock.quantity,
-                "average_price": average_price,
+                "quantity": total_quantity,
+                "average_price": round(average_price, 2),  # 소수점 두 자리로 반올림
                 "current_price": current_price,
-                "profit_rate": profit_rate
+                "profit_rate": round(profit_rate, 2)       # 소수점 두 자리로 반올림
             })
         
+        # 최종 응답 반환
         return Response({
             "status": "success",
             "portfolio": portfolio_data

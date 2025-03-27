@@ -44,4 +44,5 @@ urlpatterns = [
 
 
     path('api/stock/', include('stock_search.urls')),  # stock_search 앱 URL 등록
+    path('api/', include('guides.urls')),
 ]
