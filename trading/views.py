@@ -171,24 +171,20 @@ from users.models import User
 from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화기
 # 사용자 포트폴리오 조회 및 수익률 계산 API
 class PortfolioView(APIView):
-    """사용자 포트폴리오 조회 API"""
+    """현재 로그인한 사용자의 포트폴리오 조회 API"""
     
     permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
 
-    def get(self, request, user_id):
-        # 사용자 확인
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return error_response("사용자를 찾을 수 없습니다.", 404)
+    def get(self, request):
+        user = request.user  # 현재 로그인한 사용자 가져오기
         
-        # 사용자와 관련된 주식 포트폴리오 정보 가져오기
+        # 사용자의 포트폴리오 조회
         stock_portfolio = StockPortfolio.objects.filter(user=user)
         
         if not stock_portfolio.exists():
             return error_response("포트폴리오가 존재하지 않습니다.", 404)
         
-        # 각 주식의 현재 가격을 가져와 수익률 계산
+        # 수익률 계산
         portfolio_data = []
         for stock in stock_portfolio:
             current_price = get_current_stock_price(stock.stock_code)
@@ -197,7 +193,7 @@ class PortfolioView(APIView):
 
             # 평균 매수가 계산
             if stock.quantity > 0:
-                average_price = stock.price / stock.quantity  # 평균 매수가 계산
+                average_price = stock.price / stock.quantity
                 profit_rate = ((current_price - average_price) / average_price) * 100
             else:
                 return error_response("보유 수량이 0입니다.", 400)
