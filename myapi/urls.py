@@ -43,5 +43,5 @@ urlpatterns = [
     path('stocks/', include('stocks.urls')),  # stocks 앱의 URL 포함
 
     path('api/stock/', include('stock_search.urls')),  # stock_search 앱 URL 등록
-
+    path('api/', include('guides.urls')),
 ]
