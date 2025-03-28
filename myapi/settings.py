@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'trading.apps.TradingConfig',
     'stocks',
     'stock_search',
+    'chatbot',   
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
