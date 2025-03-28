@@ -17,6 +17,7 @@ import environ
 SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
 
 
+APPEND_SLASH = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -65,6 +66,7 @@ INSTALLED_APPS = [
     'trading.apps.TradingConfig',
     'stocks',
     'stock_search',
+    'chatbot',   
     'guides',
     # 'corsheaders',
 ]+ THIRD_PARTIES
