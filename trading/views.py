@@ -165,7 +165,7 @@ def trade(request):
 
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from .models import StockTrade,StockPortfolio
 from .models import StockPortfolio  # 사용자와 주식 포트폴리오 모델 임포트
 from users.models import User
 from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화기
@@ -173,7 +173,7 @@ from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화�
 class PortfolioView(APIView):
     """현재 로그인한 사용자의 포트폴리오 조회 API"""
     
-    permission_classes = [IsAuthenticated]  # 인증된 사용자만 접근 가능
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user  # 현재 로그인한 사용자 가져오기

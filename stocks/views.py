@@ -73,18 +73,16 @@ class DailyStockPriceView(APIView):
                 current_close = int(item["stck_clpr"])
 
                 # 전일 데이터가 있는 경우에만 변동 계산
-                if i < len(daily_prices) - 1:
-                    prev_close = int(daily_prices[i + 1]["stck_clpr"])
+                if i < len(sorted_daily_prices) - 1:
+                    prev_close = int(sorted_daily_prices[i + 1]["stck_clpr"])
                     price_change = current_close - prev_close
                     price_change_percentage = round((price_change / prev_close) * 100, 2) if prev_close > 0 else 0
                     change_status = "up" if price_change > 0 else "down" if price_change < 0 else "unchanged"
                 else:
-                    # 첫 데이터인 경우 변동 없음으로 처리
                     price_change = 0
                     price_change_percentage = 0
                     change_status = "unchanged"
 
-            for item in daily_prices:
                 chart_data.append({
                     "date": datetime.strptime(item["stck_bsop_date"], "%Y%m%d").strftime("%Y-%m-%d"),
                     "open": int(item["stck_oprc"]),
@@ -92,12 +90,10 @@ class DailyStockPriceView(APIView):
                     "low": int(item["stck_lwpr"]),
                     "close": current_close,
                     "volume": int(item["acml_vol"]),
-                    "price_change": price_change,  #✅ 전일 대비 변화값 (절대값)
-                    "price_change_percentage": price_change_percentage,  #✅ 전일 대비 변화율 (%)
-                    "change_status": change_status,  #✅ 상승/하락/변동없음 상태
-                    "close": int(item["stck_clpr"]),
-                    "volume": int(item["acml_vol"])
-                })  # 여기에 필요한 닫는 중괄호 추가
+                    "price_change": abs(price_change),
+                    "price_change_percentage": abs(price_change_percentage),
+                    "change_status": change_status
+                })
 
             return Response(
                 {
@@ -180,8 +176,8 @@ class StockPriceChangeView(APIView):
                     "current_price": current_price,
                     "previous_date": sorted_prices[1]["stck_bsop_date"],
                     "previous_price": prev_price,
-                    "price_change": price_change,
-                    "price_change_percentage": price_change_percentage,
+                    "price_change": abs(price_change),
+                    "price_change_percentage": abs(price_change_percentage),
                     "change_status": change_status
                 }, 
                 status=status.HTTP_200_OK

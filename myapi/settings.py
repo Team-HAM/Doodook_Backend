@@ -18,6 +18,7 @@ SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
 
 APPEND_SLASH = False
 
+APPEND_SLASH = False
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,8 +36,8 @@ environ.Env.read_env(os.path.join(BASE_DIR,'.env'))
 SECRET_KEY=env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG=env('DEBUG')
-DEBUG=False
+DEBUG=env('DEBUG')
+# DEBUG=True
 # ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 ALLOWED_HOSTS=['*'] #개발환경 시 활성화가 편함함
@@ -66,6 +67,9 @@ INSTALLED_APPS = [
     'trading.apps.TradingConfig',
     'stocks',
     'MBTI',
+    'stock_search',
+    'chatbot',   
+    'guides',
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -111,17 +115,24 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+import json
+# OPTIONS를 직접 파싱해서 딕셔너리로 처리
+db_options = os.getenv('DB_OPTIONS')
+if db_options:
+    try:
+        db_options = json.loads(db_options)
+    except json.JSONDecodeError:
+        db_options = {}
 
-import pymysql
-pymysql.install_as_MySQLdb()
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': env("DB_NAME"),
-        'USER': env("DB_USER"),
-        'PASSWORD' : env("DB_PASSWORD"),
-        'HOST' : env("DB_HOST"),
-        'PORT' : env("DB_PORT"),
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT'),
+        'OPTIONS': db_options,
     }
 }
 
