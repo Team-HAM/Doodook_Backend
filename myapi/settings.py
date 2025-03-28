@@ -16,6 +16,7 @@ import environ
 
 SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
 
+APPEND_SLASH = False
 
 APPEND_SLASH = False
 
@@ -65,6 +66,7 @@ INSTALLED_APPS = [
     'users',
     'trading.apps.TradingConfig',
     'stocks',
+    'MBTI',
     'stock_search',
     'chatbot',   
     'guides',
