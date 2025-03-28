@@ -11,3 +11,21 @@ class StockPortfolio(models.Model):
         return f"{self.stock_code} - {self.quantity}주"
 
 
+from django.db import models
+from django.conf import settings
+
+class StockTrade(models.Model):
+    TRADE_TYPE_CHOICES = [
+        ('buy', '매수'),
+        ('sell', '매도'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    stock_code = models.CharField(max_length=10)
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=15, decimal_places=2)  # 거래 가격
+    trade_date = models.DateTimeField(auto_now_add=True)
+    trade_type = models.CharField(max_length=10, choices=TRADE_TYPE_CHOICES, default='buy')  # 거래 유형 추가
+
+    def __str__(self):
+        return f"{self.stock_code} - {self.trade_type} - {self.quantity}주 @ {self.price}"
