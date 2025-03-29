@@ -42,7 +42,7 @@ urlpatterns = [
 
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('stocks/', include('stocks.urls')),  # stocks 앱의 URL 포함
-    path('mbti/', include('MBTI.urls'))
+    path('mbti/', include('MBTI.urls')),
 
 
     path('api/stock/', include('stock_search.urls')),  # stock_search 앱 URL 등록
