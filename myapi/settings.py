@@ -117,7 +117,7 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 # }
 import json
 # OPTIONS를 직접 파싱해서 딕셔너리로 처리
-db_options = os.getenv('DB_OPTIONS')
+db_options = os.getenv('DB_OPTIONS', '{}')
 if db_options:
     try:
         db_options = json.loads(db_options)

@@ -167,7 +167,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import StockTrade,StockPortfolio
 from .models import StockPortfolio  # 사용자와 주식 포트폴리오 모델 임포트
-from users.models import User
+# from users.models import User
 from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화기
 # 사용자 포트폴리오 조회 및 수익률 계산 API
 class PortfolioView(APIView):
