@@ -124,6 +124,9 @@ if db_options:
     except json.JSONDecodeError:
         db_options = {}
 
+        
+import pymysql
+pymysql.install_as_MySQLdb()
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

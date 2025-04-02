@@ -13,17 +13,6 @@
     {
         "model": "MBTI.mbtiquestion",
         "fields": {
-            "question_text": "주위에서 유명한 주식(ex. 테슬라)이 계속 오르고 있다고 들었을 때, 어떻게 생각할 것인가요?",
-            "option_a": "그 주식이 왜 오르고 있는지, 차트나 뉴스 등을 찾아보고 분석할 필요가 있어.",
-            "option_b": "주식이 오르고 있으니 나도 지금 당장 사는 게 좋은 것 같아.",
-            "type_a": "S",
-            "type_b": "R",
-            "related_trait": "S/R"
-        }
-    },
-    {
-        "model": "MBTI.mbtiquestion",
-        "fields": {
             "question_text": "갑자기 주식이 큰 폭으로 오르거나 내렸을 때, 당신은?",
             "option_a": "갑자기 변동성이 크니까 좀 더 안정될 때까지 기다려야겠어.",
             "option_b": "이런 변동성이 기회! 내가 지금 들어가면 더 큰 수익을 낼 수 있을 것 같아",
@@ -49,17 +38,6 @@
             "question_text": "뉴스에서 ‘이제 AI가 대세다!’라는 기사를 봤을 때 나는?",
             "option_a": "AI 기업들의 수익성과 성장 가능성을 분석해본다.",
             "option_b": "AI 관련 주식들이 요즘 오르니까 분위기를 살펴본다.",
-            "type_a": "F",
-            "type_b": "D",
-            "related_trait": "F/D"
-        }
-    },
-    {
-        "model": "MBTI.mbtiquestion",
-        "fields": {
-            "question_text": "새로운 기업중 최근 급성장한 회사가 있다고 주위에서 들었을 때 나는?",
-            "option_a": "그 기업이 시장에서 주목받고 있는 이유를 분석하고, 그 트렌드를 따라가고 싶다.",
-            "option_b": "그 기업의 재무상태와 성장 가능성을 분석하고, 숫자와 실적을 바탕으로 투자 결정을 내린다.",
             "type_a": "F",
             "type_b": "D",
             "related_trait": "F/D"
@@ -101,23 +79,12 @@
     {
         "model": "MBTI.mbtiquestion",
         "fields": {
-            "question_text": "만약 한 회사에 오랬동안 투자할 전략을 세운다면, 어떤 회사에 투자할 것인가요?",
-            "option_a": "오랜 시간 동안 안정적인 수익을 제공할 수 있는 기업에 투자한다.",
-            "option_b": "앞으로 빠르게 성장할 수 있는 혁신적인 기술을 가진 회사를 찾아 장기적으로 투자한다.",
-            "type_a": "V",
-            "type_b": "G",
-            "related_trait": "V/G"
-        }
-    },
-    {
-        "model": "MBTI.mbtiquestion",
-        "fields": {
             "question_text": "당신이 선물로 주식을 받는다면?",
             "option_a": "이자 꼬박꼬박 나오는 우량주! 이런 건 평생 가져가야지.",
             "option_b": "지금은 작아도 미래에 대박 날 기업! 성장주가 로망이야!",
             "type_a": "V",
             "type_b": "G",
-            "related_trait": "V/G"
+            "related_trait": "F/D"
         }
     },
     {
@@ -137,17 +104,6 @@
             "question_text": "주식 투자에서 가장 중요하다고 생각하는 것은?",
             "option_a": "계획을 세우고 꾸준히 지켜나가는 것",
             "option_b": "적절한 타이밍을 잡고 유연하게 대응하는 것",
-            "type_a": "H",
-            "type_b": "Q",
-            "related_trait": "H/Q"
-        }
-    },
-    {
-        "model": "MBTI.mbtiquestion",
-        "fields": {
-            "question_text": "주식 투자에서 손실이 발생했을 때, 어떻게 반응할 것인가요?",
-            "option_a": "시장의 변동성을 받아들이고, 장기적인 계획을 계속 유지하며 손실을 복구할 시간을 기다린다.",
-            "option_b": "손실을 빠르게 커버할 수 있는 다른 기회를 찾아서 유연하게 대응한다.",
             "type_a": "H",
             "type_b": "Q",
             "related_trait": "H/Q"
