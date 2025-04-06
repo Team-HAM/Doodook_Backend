@@ -14,7 +14,7 @@ from pathlib import Path
 from datetime import timedelta
 import environ
 
-SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
+SITE_URL = 'https://port-0-doodook-backend-lyycvlpm0d9022e4.sel4.cloudtype.app'  # 개발 환경시 활성화
 
 APPEND_SLASH = False
 
