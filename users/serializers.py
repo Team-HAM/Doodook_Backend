@@ -7,7 +7,8 @@ from rest_framework_jwt.settings import api_settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.conf import settings
-
+import random
+from django.template.loader import render_to_string
 User = get_user_model()
 
 # JWT 핸들러 설정
@@ -20,12 +21,15 @@ def generate_jwt_token(user):
     payload = JWT_PAYLOAD_HANDLER(user)
     return JWT_ENCODE_HANDLER(payload)
 
+def generate_code():
+    return str(random.randint(100000, 999999))
 
 # 유효성 검사 함수 정의
 def email_isvalid(email):
     email_regex = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     return re.match(email_regex, email) is not None
 
+from .models import UserActivation
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -60,15 +64,20 @@ class UserSerializer(serializers.ModelSerializer):
             birthdate=validated_data.get("birthdate", None),
             address=validated_data.get("address", ""),
         )
+        
         user.is_active = False
         user.save()
 
-        jwt_token = generate_jwt_token(user)
-        activation_url = f"{settings.SITE_URL}/users/{user.id}/activation?token={jwt_token}"
+        activation = UserActivation.objects.create(user=user)
+        activation.code = generate_code()
+        activation.save()
+        activation_url = f"{settings.SITE_URL}/users/activation/{activation.token}"
 
         message = render_to_string('users/user_activate_email.html', {
             'user': user,
+            'activation_token': str(activation.token),
             'activation_url': activation_url,
+            'code': activation.code,
             'user_email': user.email,
             'user_nickname': user.nickname or user.email.split('@')[0],
         })
@@ -115,3 +124,4 @@ class ChangePasswordSerializer(serializers.Serializer):
         if not check_password(value, user.password):
             raise serializers.ValidationError("현재 비밀번호가 올바르지 않습니다.")
         return value
+    
