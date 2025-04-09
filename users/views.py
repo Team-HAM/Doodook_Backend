@@ -349,66 +349,73 @@ class ChangePasswordView(UpdateAPIView):
         return error_response("비밀번호 형식이 올바르지 않습니다.", 400)
     
 #비밀번호 재설정
+import random
+from django.utils import timezone
+from django.core.mail import EmailMessage
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from django.core.mail import EmailMessage
-from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
+from .models import PasswordResetCode
 
 class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-
+        email = request.data.get("email")
         if not email:
-            return error_response("이메일을 입력하세요.", 400)
+            return Response({"error": "이메일을 입력하세요."}, status=400)
 
         try:
             user = get_user_model().objects.get(email=email)
         except get_user_model().DoesNotExist:
-            return error_response("해당 이메일로 가입된 사용자가 없습니다.", 404)
-        
-        # 이메일에 포함할 토큰 생성
-        token = default_token_generator.make_token(user)
-        reset_url = f"{settings.SITE_URL}/users/password-reset/confirm/?token={token}"
+            return Response({"error": "가입된 이메일이 없습니다."}, status=404)
 
-        # 이메일 내용
-        subject = "[YourApp] 비밀번호 재설정 요청"
-        message = f"비밀번호 재설정을 위해 아래 링크를 클릭하세요: {reset_url}"
+        code = str(random.randint(100000, 999999))
 
-        # 이메일 전송
-        email_message = EmailMessage(subject, message, to=[email])
-        email_message.send()
+        # 기존 코드가 있으면 업데이트
+        PasswordResetCode.objects.update_or_create(
+            user=user,
+            defaults={"code": code, "created_at": timezone.now()}
+        )
 
-        return Response({
-            "status": "success",
-            "message": "비밀번호 재설정 링크를 이메일로 발송했습니다."
-        }, status=status.HTTP_200_OK)
+        EmailMessage(
+            subject="[두둑] 비밀번호 재설정 인증번호",
+            body=f"인증번호는 [{code}]입니다. 10분 안에 입력해주세요.",
+            to=[email]
+        ).send()
+
+        return Response({"message": "인증번호를 이메일로 보냈습니다."})
+
 
 # 비밀번호 재설정 확인
-class PasswordResetConfirmView(APIView):
+class PasswordResetVerifyView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        email = request.data.get('email')
-        token = request.data.get('reset_token')
-        new_password = request.data.get('new_password')
+        email = request.data.get("email")
+        code = request.data.get("code")
+        new_password = request.data.get("new_password")
 
-        if not email or not token or not new_password:
-            return error_response("이메일, 토큰, 새 비밀번호를 입력하세요.", 400)
+        if not all([email, code, new_password]):
+            return Response({"error": "모든 값을 입력해주세요."}, status=400)
 
         try:
             user = get_user_model().objects.get(email=email)
         except get_user_model().DoesNotExist:
-            return error_response("해당 이메일로 가입된 사용자가 없습니다.", 404)
+            return Response({"error": "가입된 이메일이 없습니다."}, status=404)
 
-        if not default_token_generator.check_token(user, token):
-            return error_response("유효하지 않은 인증 토큰입니다.", 400)
+        try:
+            reset_obj = PasswordResetCode.objects.get(user=user, code=code)
+        except PasswordResetCode.DoesNotExist:
+            return Response({"error": "인증번호가 틀리거나 존재하지 않습니다."}, status=400)
+
+        if reset_obj.is_expired():
+            reset_obj.delete()
+            return Response({"error": "인증번호가 만료되었습니다."}, status=400)
 
         user.set_password(new_password)
         user.save()
-        return Response({
-            "status": "success",
-            "message": "비밀번호가 성공적으로 변경되었습니다."
-        }, status=status.HTTP_200_OK)
+        reset_obj.delete()
+
+        return Response({"message": "비밀번호가 성공적으로 변경되었습니다."})

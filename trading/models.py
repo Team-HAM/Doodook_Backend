@@ -4,6 +4,7 @@ from django.conf import settings
 class StockPortfolio(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True)
     stock_code = models.CharField(max_length=10)
+    stock_name=models.CharField(max_length=100,blank=True) # 종목명 추가
     quantity = models.IntegerField(default=0)
     price = models.IntegerField(default=0)  # 마지막 거래 가격
     total_cost = models.IntegerField(default=0)  # 누적 매입 금액 추가

@@ -192,6 +192,7 @@ from rest_framework.permissions import IsAuthenticated
 from .models import StockPortfolio
 # from .utils import get_current_stock_price  # 이미 쓰고 있는 함수
 import time
+from stock_search.models import Stock # stock_search의 모델을 가져오기 (종목명 조회)
 
 class PortfolioView(APIView):
     permission_classes = [IsAuthenticated]
@@ -229,13 +230,21 @@ class PortfolioView(APIView):
                 average_price = 0
                 profit_rate = 0
 
+            try:
+                stock_info = Stock.objects.get(symbol=stock.stock_code)
+                stock_name = stock_info.name
+            except Stock.DoesNotExist:
+                stock_name = "Unknown"
+
             portfolio_data.append({
                 "stock_code": stock.stock_code,
+                "stock_name": stock_name,  # 이 줄 추가!
                 "quantity": stock.quantity,
                 "average_price": round(average_price, 2),
                 "current_price": current_price,
                 "profit_rate": round(profit_rate, 2)
             })
+
 
         return Response({
             "status": "success",
