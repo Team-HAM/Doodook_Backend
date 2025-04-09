@@ -1,11 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-   <title>회원가입 인증</title>
-</head>
-<body>
-   <p>안녕하세요, {{ user.nickname|default:user.email }}님!</p>
-   <p>아래 링크를 클릭하여 회원가입을 완료하세요:</p>
-   <a href="{{ activation_url }}">회원가입 인증하기</a>
-</body>
-</html>
+<p>안녕하세요, {{ user.nickname|default:user.email }}님!</p>
+
+<p>아래 링크를 클릭하면 회원가입 인증이 완료됩니다:</p>
+<p><a href="{{ activation_url }}">회원가입 인증하기</a></p>
+
+<p>만약 링크가 작동하지 않는다면, 아래 인증번호를 복사하여 인증해주세요:</p>
+<h2>{{ code }}</h2>
