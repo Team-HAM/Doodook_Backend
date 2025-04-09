@@ -20,50 +20,52 @@ def error_response(message, code):
 
 # 주식 현재가 조회 함수
 def get_current_stock_price(stock_code):
-    # Access Token 확인
     access_token = AccessToken.objects.first()
 
     if access_token is None or not access_token.access_token:
-        return None  # Access token이 없으면 None 반환
+        print("❗️Access token 없음")
+        return None
 
-    # API URL 설정
     req_url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price"
-    
+
     headers = {
         "content-type": "application/json",
         "authorization": f"Bearer {access_token.access_token}",
         "appkey": HANTU_API_APP_KEY,
         "appsecret": HANTU_API_APP_SECRET,
-        "tr_id": "FHKST01010100"  # 주식 현재가 조회 TR ID
+        "tr_id": "FHKST01010100"
     }
+
     params = {
-        "FID_COND_MRKT_DIV_CODE": "J",  # 국내 주식 코드 (KOSPI: J, KOSDAQ: Q)
+        "FID_COND_MRKT_DIV_CODE": "J",  # 코스피
         "FID_INPUT_ISCD": stock_code
     }
 
     try:
-        # API 요청 보내기
         response = requests.get(req_url, headers=headers, params=params)
 
-        # 응답 상태 코드 확인
-        if response.status_code != 200:
-            return None  # 요청 실패시 None 반환
+        # print("✅ API 응답 상태코드:", response.status_code)
+        # print("✅ API 응답 내용:", response.text)
 
-        # 응답 데이터 처리
+        if response.status_code != 200:
+            return None
+
         data = response.json()
 
         if "output" not in data:
-            return None  # 데이터가 없다면 None 반환
+            return None
 
-        # 주식 가격 추출
         stock_price = data["output"].get("stck_prpr")
 
         if not stock_price:
-            return None  # 주식 가격 데이터가 없다면 None 반환
+            return None
 
-        return float(stock_price)  # 가격을 float로 반환
-    except requests.exceptions.RequestException:
-        return None  # API 요청 실패시 None 반환
+        return float(stock_price)
+
+    except requests.exceptions.RequestException as e:
+        print("❌ 요청 예외 발생:", str(e))
+        return None
+
 
 
 # 주식 가격 조회 뷰
@@ -119,41 +121,55 @@ def trade(request):
     if order_type == "buy":
         total_cost = quantity * price
 
-        # 잔고 확인
         if user.balance < total_cost:
             return error_response("잔고가 부족합니다.", 400)
 
-        # 잔고 차감 및 포트폴리오 갱신
         user.balance -= total_cost
         user.save()
 
         portfolio.quantity += quantity
-        portfolio.price = price  # 마지막 거래 가격 업데이트
+        portfolio.total_cost += total_cost
+        portfolio.price = price
         portfolio.save()
 
+        StockTrade.objects.create(
+            user=user,
+            stock_code=stock_symbol,
+            quantity=quantity,
+            price=price,
+            trade_type="buy"
+        )
+
         response = f"{stock_symbol} {quantity}주 매수 완료 ({price}원)"
-    
+
     elif order_type == "sell":
-        # 보유 주식 수량 확인
         if portfolio.quantity < quantity:
             return error_response("보유 수량이 부족합니다.", 400)
 
         total_earnings = quantity * price
-
-        # 포트폴리오 업데이트
+        proportional_cost = int((portfolio.total_cost / portfolio.quantity) * quantity)
+        portfolio.total_cost -= proportional_cost
         portfolio.quantity -= quantity
 
-        # 수량이 0이면 포트폴리오 삭제
         if portfolio.quantity == 0:
             portfolio.delete()
         else:
             portfolio.save()
 
-        # 잔고 업데이트
         user.balance += total_earnings
         user.save()
 
+        StockTrade.objects.create(
+            user=user,
+            stock_code=stock_symbol,
+            quantity=quantity,
+            price=price,
+            trade_type="sell"
+        )
+
         response = f"{stock_symbol} {quantity}주 매도 완료 ({price}원)"
+
+
 
     else:
         return error_response("잘못된 요청입니다.", 400)
@@ -170,43 +186,67 @@ from .models import StockPortfolio  # 사용자와 주식 포트폴리오 모델
 # from users.models import User
 from .serializers import StockPortfolioSerializer  # 포트폴리오 직렬화기
 # 사용자 포트폴리오 조회 및 수익률 계산 API
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from .models import StockPortfolio
+# from .utils import get_current_stock_price  # 이미 쓰고 있는 함수
+import time
+from stock_search.models import Stock # stock_search의 모델을 가져오기 (종목명 조회)
+
 class PortfolioView(APIView):
-    """현재 로그인한 사용자의 포트폴리오 조회 API"""
-    
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = request.user  # 현재 로그인한 사용자 가져오기
-        
-        # 사용자의 포트폴리오 조회
+        user = request.user
         stock_portfolio = StockPortfolio.objects.filter(user=user)
-        
+
         if not stock_portfolio.exists():
-            return error_response("포트폴리오가 존재하지 않습니다.", 404)
-        
-        # 수익률 계산
+            return Response({
+                "status": "error",
+                "message": "포트폴리오가 존재하지 않습니다.",
+                "code": 404
+            }, status=404)
+
         portfolio_data = []
-        for stock in stock_portfolio:
+        for i, stock in enumerate(stock_portfolio):
+            # 요청 수 제한을 피하기 위해 딜레이
+            if i > 0:
+                time.sleep(0.25)  # 초당 4건 = 안정권
+
             current_price = get_current_stock_price(stock.stock_code)
             if current_price is None:
-                return error_response(f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다.", 500)
+                return Response({
+                    "status": "error",
+                    "message": f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다.",
+                    "code": 500
+                }, status=500)
 
-            # 평균 매수가 계산
-            if stock.quantity > 0:
-                average_price = stock.price / stock.quantity
+            # 평균 매입가 및 수익률 계산
+            if stock.quantity > 0 and stock.total_cost > 0:
+                average_price = stock.total_cost / stock.quantity
                 profit_rate = ((current_price - average_price) / average_price) * 100
             else:
-                return error_response("보유 수량이 0입니다.", 400)
+                average_price = 0
+                profit_rate = 0
+
+            try:
+                stock_info = Stock.objects.get(symbol=stock.stock_code)
+                stock_name = stock_info.name
+            except Stock.DoesNotExist:
+                stock_name = "Unknown"
 
             portfolio_data.append({
                 "stock_code": stock.stock_code,
+                "stock_name": stock_name,  # 이 줄 추가!
                 "quantity": stock.quantity,
-                "average_price": average_price,
+                "average_price": round(average_price, 2),
                 "current_price": current_price,
-                "profit_rate": profit_rate
+                "profit_rate": round(profit_rate, 2)
             })
-        
+
+
         return Response({
             "status": "success",
             "portfolio": portfolio_data
-        }, status=status.HTTP_200_OK)
+        }, status=200)
