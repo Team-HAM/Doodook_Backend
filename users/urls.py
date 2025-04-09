@@ -1,9 +1,9 @@
 # users/urls.py
 from django.urls import path
 from . import views
-from .views import UserDeleteView, ChangePasswordView, PasswordResetRequestView, PasswordResetVerifyView
-urlpatterns =[
-   # 'me/' 경로에 대한 처리
+from .views import UserDeleteView, ChangePasswordView, PasswordResetRequestView, PasswordResetVerifyView, ActivateUserView, ActivateWithCodeView
+urlpatterns = [
+    # 'me/' 경로에 대한 처리
     path('me/', views.MeView.as_view(), name='user_me'),
 
     # '<int:pk>/' 경로에 대한 처리 (사용자 정보 가져오기)
@@ -13,5 +13,7 @@ urlpatterns =[
     path('change_password/', ChangePasswordView.as_view(), name='change-password'),
     path('password_reset/request/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password_reset/verify/', PasswordResetVerifyView.as_view(), name='password-reset-verify'),
+    path('activation/<uuid:token>', ActivateUserView.as_view(), name='activate-user'),
+    path("activation/code/", ActivateWithCodeView.as_view()),
 ]
 

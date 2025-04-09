@@ -92,6 +92,74 @@ class SignupView(CreateAPIView):
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
+from .models import UserActivation
+# views.py
+# users/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from users.models import User, UserActivation
+
+class ActivateUserView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        try:
+            activation = UserActivation.objects.get(token=token)
+        except UserActivation.DoesNotExist:
+            return Response({
+                "status": "error",
+                "message": "인증에 실패하였습니다.",
+                "code": 400
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user = activation.user
+        if not user.is_active:
+            user.is_active = True
+            user.save()
+            activation.delete()  # 인증 완료 시 삭제
+
+        return Response({
+            "status": "success",
+            "message": "계정이 활성화되었습니다."
+        })
+    
+class ActivateWithCodeView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+        code = request.data.get("code")
+
+        if not email:
+            return Response({"status": "error", "message": "이메일이 필요합니다."}, status=400)
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({"status": "error", "message": "존재하지 않는 사용자입니다."}, status=404)
+
+        # ✅ 이미 활성화된 경우, 코드가 없어도 성공 처리
+        if user.is_active:
+            return Response({"status": "success", "message": "이미 인증된 사용자입니다."}, status=200)
+
+        # 코드가 없을 경우 인증 불가
+        if not code:
+            return Response({"status": "error", "message": "인증 코드가 필요합니다."}, status=400)
+
+        try:
+            activation = UserActivation.objects.get(user=user)
+        except UserActivation.DoesNotExist:
+            return Response({"status": "error", "message": "인증 정보가 없습니다."}, status=404)
+
+        if activation.code == code:
+            user.is_active = True
+            user.save()
+            activation.delete()
+            return Response({"status": "success", "message": "계정이 인증되었습니다."}, status=200)
+
+        return Response({"status": "error", "message": "잘못된 인증 코드입니다."}, status=400)
+
 from django.contrib.auth.hashers import check_password   
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.models import update_last_login
