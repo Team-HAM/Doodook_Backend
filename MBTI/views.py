@@ -1,7 +1,9 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics, permissions
+
 from .models import MBTIQuestion, MBTIResult, InvestmentMBTI
+
 from .serializers import MBTIQuestionSerializer
 
 class MBTIQuestionListView(generics.ListAPIView):
@@ -55,6 +57,7 @@ class MBTIResultDetailView(APIView):
     """ 사용자의 MBTI 결과를 조회하는 API """
     permission_classes = [permissions.IsAuthenticated]
 
+
     def get(self, request, *args, **kwargs):
         user = request.user
         mbti_result = MBTIResult.objects.filter(user=user).first()
@@ -89,3 +92,4 @@ class MBTIRecommendationView(APIView):
         }
         
         return Response(recommendation_data, status=200)
+

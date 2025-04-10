@@ -24,6 +24,7 @@ class MBTIQuestion(models.Model):
 
     def __str__(self):
         return self.question_text
+      
     
 class MBTIResult(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -31,4 +32,3 @@ class MBTIResult(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     
-

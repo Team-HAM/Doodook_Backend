@@ -1,9 +1,16 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 
+import uuid
 
-
-
+class UserActivation(models.Model):
+    user = models.OneToOneField(
+        'users.User',  # 문자열로 참조: 앱이름.모델이름
+        on_delete=models.CASCADE
+    )
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    code = models.CharField(max_length=6, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 # Custom User Manager
 class UserManager(BaseUserManager):
@@ -64,4 +71,19 @@ class PasswordResetToken(models.Model):
 
     def __str__(self):
         return f"{self.email} - {self.token}"
+# 비밀번호 재설정 인증번호
+from django.db import models
+from django.conf import settings
+from django.utils import timezone
+from datetime import timedelta
 
+class PasswordResetCode(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timedelta(minutes=10)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.code}"

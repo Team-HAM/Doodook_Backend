@@ -24,7 +24,19 @@ class StockSearchAPIView(ListAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        queryset = Stock.objects.filter(Q(name__icontains=query) | Q(symbol__icontains=query))
+        from django.db.models import Q, Case, When, Value, IntegerField
+
+        queryset = Stock.objects.filter(
+            Q(name__icontains=query) | Q(symbol__icontains=query)
+        ).annotate(
+            priority=Case(
+                When(symbol__istartswith=query, then=Value(0)),
+                When(name__istartswith=query, then=Value(0)),
+                default=Value(1),
+                output_field=IntegerField()
+            )
+        ).order_by('priority')
+
 
         # ✅ 404 오류: 검색 결과가 없을 때
         if not queryset.exists():
