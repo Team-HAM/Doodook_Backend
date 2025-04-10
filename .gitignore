@@ -8,3 +8,10 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 media
+advanced_guides.json
+advanced_guides.md 
+guides.json
+tutorial_guides.json
+tutorial_guides.md 
+MBTI/fixtures/investment_mbti.json
+MBTI/fixtures/investment_mbti_with_types.json
