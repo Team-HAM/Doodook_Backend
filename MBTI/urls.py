@@ -1,5 +1,7 @@
 from django.urls import path
-from .views import MBTIQuestionListView, MBTIResultView, MBTIResultDetailView
+
+from .views import MBTIQuestionListView, MBTIResultView, MBTIResultDetailView, MBTIRecommendationView
+
 
 urlpatterns = [
     # 12개의 MBTI 질문 조회
@@ -10,4 +12,8 @@ urlpatterns = [
 
     # 사용자의 MBTI 결과 조회
     path("result/detail/", MBTIResultDetailView.as_view(), name="mbti-result-detail"),
+
+    
+    path("result/recommendations/", MBTIRecommendationView.as_view(), name="mbti-recommendations"),
+
 ]

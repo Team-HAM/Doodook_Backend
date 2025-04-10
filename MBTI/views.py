@@ -1,7 +1,9 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import generics, permissions
-from .models import MBTIQuestion, MBTIResult
+
+from .models import MBTIQuestion, MBTIResult, InvestmentMBTI
+
 from .serializers import MBTIQuestionSerializer
 
 class MBTIQuestionListView(generics.ListAPIView):
@@ -55,6 +57,7 @@ class MBTIResultDetailView(APIView):
     """ 사용자의 MBTI 결과를 조회하는 API """
     permission_classes = [permissions.IsAuthenticated]
 
+
     def get(self, request, *args, **kwargs):
         user = request.user
         mbti_result = MBTIResult.objects.filter(user=user).first()
@@ -62,3 +65,31 @@ class MBTIResultDetailView(APIView):
             return Response({"message": "MBTI 결과가 없습니다."}, status=404)
 
         return Response({"result": mbti_result.result})
+
+class MBTIRecommendationView(APIView):
+    """ 사용자의 MBTI 유형에 따른 추천 정보를 제공하는 API """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        mbti_result = MBTIResult.objects.filter(user=user).first()
+        
+        if not mbti_result:
+            return Response({"message": "MBTI 결과가 없습니다."}, status=404)
+        
+        investment_mbti = InvestmentMBTI.objects.filter(name=mbti_result.result).first()
+        
+        if not investment_mbti:
+            return Response({"message": "해당 MBTI에 대한 추천 정보가 없습니다."}, status=404)
+        
+        recommendation_data = {
+            "mbti": investment_mbti.name,
+            "alias": investment_mbti.alias,
+            "books": investment_mbti.books.split(",") if investment_mbti.books else [],
+            "websites": investment_mbti.websites.split(",") if investment_mbti.websites else [],
+            "newsletters": investment_mbti.newsletters.split(",") if investment_mbti.newsletters else [],
+            "psychology_guide": investment_mbti.psychology_guide,
+        }
+        
+        return Response(recommendation_data, status=200)
+
