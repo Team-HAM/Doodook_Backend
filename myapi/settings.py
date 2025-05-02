@@ -117,6 +117,8 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 #     }
 # }
 import json
+import pymysql
+pymysql.install_as_MySQLdb()
 # OPTIONS를 직접 파싱해서 딕셔너리로 처리
 db_options = os.getenv('DB_OPTIONS', '{}')
 if db_options:
