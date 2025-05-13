@@ -8,7 +8,12 @@ class UserActivation(models.Model):
         'users.User',  # 문자열로 참조: 앱이름.모델이름
         on_delete=models.CASCADE
     )
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    token = models.CharField(
+    max_length=36,
+    default=uuid.uuid4,
+    editable=False,
+    unique=True)
+
     code = models.CharField(max_length=6, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
