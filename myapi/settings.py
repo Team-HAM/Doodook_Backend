@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'stock_search',
     'chatbot',   
     'guides',
+    'asset',
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -126,6 +127,7 @@ if db_options:
         db_options = json.loads(db_options)
     except json.JSONDecodeError:
         db_options = {}
+
 
         
 import pymysql
