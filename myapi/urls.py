@@ -52,4 +52,6 @@ urlpatterns = [
     path('api/', include('guides.urls')),
 
     path('api/asset/', include('asset.urls')),
+
+    path('progress/', include('progress_guides.urls')),
 ]
