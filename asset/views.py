@@ -19,13 +19,13 @@ class AssetSummaryView(APIView):
         breakdown = []
 
         for i, stock in enumerate(stock_portfolio):
-            print("🔍 stock_code:", repr(stock.stock_code))
+            #print("🔍 stock_code:", repr(stock.stock_code)) - 디버그 용 코드
 
             if i > 0:
                 time.sleep(0.25)
 
             current_price = get_current_stock_price(stock.stock_code)
-            print("💰 current_price:", current_price)
+            #print("💰 current_price:", current_price) - 디버그 용 코드
 
             if current_price is None:
                 print(f"❗ {stock.stock_code} 현재가 없음, 건너뜀")
