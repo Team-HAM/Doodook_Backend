@@ -135,6 +135,8 @@ def trade(request):
     if order_type == "sell" and price > current_price:
         return error_response(f"매도 가격은 현재가 ({current_price}원)보다 낮거나 같아야 합니다.", 400)
 
+    # 사용자별 포트폴리오 가져오기 (없으면 생성)
+    portfolio, created = StockPortfolio.objects.get_or_create(user=user, stock_code=stock_symbol)
     
 
     if order_type == "buy":
