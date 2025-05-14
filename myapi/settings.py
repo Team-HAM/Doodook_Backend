@@ -14,7 +14,8 @@ from pathlib import Path
 from datetime import timedelta
 import environ
 
-SITE_URL = 'http://localhost:8000'  # 개발 환경시 활성화
+# SITE_URL = 'http://127.0.0.1:8000'  # 개발 환경시 활성화
+SITE_URL = os.environ.get('SITE_URL', 'http://127.0.0.1:8000')
 
 APPEND_SLASH = False
 
@@ -70,6 +71,8 @@ INSTALLED_APPS = [
     'stock_search',
     'chatbot',   
     'guides',
+    'asset',
+    'progress_guides',
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -116,6 +119,8 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 #     }
 # }
 import json
+import pymysql
+pymysql.install_as_MySQLdb()
 # OPTIONS를 직접 파싱해서 딕셔너리로 처리
 db_options = os.getenv('DB_OPTIONS', '{}')
 if db_options:
@@ -124,6 +129,10 @@ if db_options:
     except json.JSONDecodeError:
         db_options = {}
 
+
+        
+import pymysql
+pymysql.install_as_MySQLdb()
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',

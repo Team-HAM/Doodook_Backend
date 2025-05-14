@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 class InvestmentMBTI(models.Model):
     name = models.CharField(max_length=10, unique=True)  # MBTI 유형 (예: "ISTJ")
@@ -23,6 +24,11 @@ class MBTIQuestion(models.Model):
 
     def __str__(self):
         return self.question_text
+      
+    
+class MBTIResult(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    result = models.CharField(max_length=4)  # 예: 'INTJ', 'ESFP' 등
+    created_at = models.DateTimeField(auto_now_add=True)
 
     
-
