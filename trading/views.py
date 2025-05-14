@@ -103,10 +103,30 @@ def trade(request):
     if not stock_symbol or not order_type or quantity is None or price is None:
         return error_response("유효하지 않은 요청 매개변수입니다.", 400)
 
-    # 주식 가격 가져오기
+    # 가격 가져오기
     current_price = get_current_stock_price(stock_symbol)
     if current_price is None:
         return error_response("주식 가격을 가져올 수 없습니다.", 500)
+
+    # 종목명은 DB에서 조회
+    try:
+        from stock_search.models import Stock  # 실제 모델명으로 수정
+        stock_info = Stock.objects.get(symbol=stock_symbol)
+        stock_name = stock_info.name
+    except Stock.DoesNotExist:
+        stock_name = stock_symbol
+
+    # 포트폴리오 생성 또는 업데이트
+    portfolio, created = StockPortfolio.objects.get_or_create(
+        user=user,
+        stock_code=stock_symbol,
+        defaults={"stock_name": stock_name}
+    )
+
+    if not portfolio.stock_name:
+        portfolio.stock_name = stock_name
+        portfolio.save()
+
 
     # 현재 가격 확인
     if order_type == "buy" and price < current_price:
@@ -115,8 +135,7 @@ def trade(request):
     if order_type == "sell" and price > current_price:
         return error_response(f"매도 가격은 현재가 ({current_price}원)보다 낮거나 같아야 합니다.", 400)
 
-    # 사용자별 포트폴리오 가져오기 (없으면 생성)
-    portfolio, created = StockPortfolio.objects.get_or_create(user=user, stock_code=stock_symbol)
+    
 
     if order_type == "buy":
         total_cost = quantity * price

@@ -71,6 +71,8 @@ INSTALLED_APPS = [
     'stock_search',
     'chatbot',   
     'guides',
+    'asset',
+    'progress_guides',
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -117,6 +119,8 @@ WSGI_APPLICATION = 'myapi.wsgi.application'
 #     }
 # }
 import json
+import pymysql
+pymysql.install_as_MySQLdb()
 # OPTIONS를 직접 파싱해서 딕셔너리로 처리
 db_options = os.getenv('DB_OPTIONS', '{}')
 if db_options:
@@ -124,6 +128,7 @@ if db_options:
         db_options = json.loads(db_options)
     except json.JSONDecodeError:
         db_options = {}
+
 
         
 import pymysql
