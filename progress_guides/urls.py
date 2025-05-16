@@ -3,6 +3,7 @@ from .views import (
     complete_content_by_level,
     level_progress_detail,
     can_access_content,
+    level_progress_allcontent,
 )
 
 urlpatterns = [
@@ -12,7 +13,10 @@ urlpatterns = [
     # 콘텐츠가 열렸는지 확인
     path('unlock/<int:level_id>/<int:content_number>/', can_access_content, name='can-access-content'),
 
-    # 특정 단계의 전체 진도율 확인
+    # 특정 단계의 전체 진도율 내용 확인
     path('level/<int:level_id>/', level_progress_detail, name='level-progress'),
+
+    #특정 단계의 전체 content 진도율 확인
+    path('level/<int:level_id>/content/', level_progress_allcontent, name='level_progress_allcontent'),
 
 ]
