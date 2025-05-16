@@ -122,3 +122,35 @@ def can_access_content(request, level_id, content_number):
             "required_previous": f"{level_id}-{content_number - 1}",
             "message": f"{level_id}-{content_number - 1} 콘텐츠를 먼저 완료해야 합니다."
         })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def level_progress_allcontent(request, level_id):
+    user = request.user
+    contents = get_contents(level_id)
+
+    if contents is None:
+        return Response({"error": "Invalid level_id"}, status=400)
+
+    contents_list = list(contents)
+    total = len(contents_list)
+    completed_count = 0
+
+    content_progress = {}
+
+    for idx, content in enumerate(contents_list, start=1):
+        is_completed = UserLearningProgress.objects.filter(
+            user=user, level=level_id, content_id=content.id, is_completed=True
+        ).exists()
+        content_progress[str(idx)] = is_completed
+        if is_completed:
+            completed_count += 1
+
+    return Response({
+        "level": level_id,
+        "content_progress": content_progress,
+        "total": total,
+        "completed": completed_count
+    })
+
