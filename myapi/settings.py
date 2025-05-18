@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'guides',
     'asset',
     'progress_guides',
+    'ai_chatbot',
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -241,3 +242,6 @@ HANTU_API_APP_SECRET= env("HANTU_API_APP_SECRET")
 
 # 추가: 한국투자증권 설정
 # KIS_CONFIG_PATH = os.path.join(BASE_DIR, 'config', 'kis_devlp.yaml')
+
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
