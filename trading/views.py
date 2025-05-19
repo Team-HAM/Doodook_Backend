@@ -20,57 +20,65 @@ def error_response(message, code):
 
 # 주식 현재가 조회 함수
 def get_current_stock_price(stock_code):
-    access_token = AccessToken.objects.first()
-
-    if access_token is None or not access_token.access_token:
-        print("❗️Access token 없음")
-        return None
-
-    req_url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price"
-
-    headers = {
-        "content-type": "application/json",
-        "authorization": f"Bearer {access_token.access_token}",
-        "appkey": HANTU_API_APP_KEY,
-        "appsecret": HANTU_API_APP_SECRET,
-        "tr_id": "FHKST01010100"
-    }
-
-    params = {
-        "FID_COND_MRKT_DIV_CODE": "J",  # 코스피
-        "FID_INPUT_ISCD": stock_code
-    }
-
     try:
-        response = requests.get(req_url, headers=headers, params=params)
+        access_token = AccessToken.objects.first()
+        if access_token is None or not access_token.access_token:
+            print("❗️Access token 없음")
+            return None
 
-        # print("✅ API 응답 상태코드:", response.status_code)
-        # print("✅ API 응답 내용:", response.text)
+        req_url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-price"
+
+        headers = {
+            "content-type": "application/json",
+            "authorization": f"Bearer {access_token.access_token}",
+            "appkey": HANTU_API_APP_KEY,
+            "appsecret": HANTU_API_APP_SECRET,
+            "tr_id": "FHKST01010100"
+        }
+
+        params = {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": stock_code
+        }
+
+        response = requests.get(req_url, headers=headers, params=params, timeout=3)
 
         if response.status_code != 200:
+            print(f"❗️API 상태코드 오류: {response.status_code}, 응답: {response.text}")
             return None
 
-        data = response.json()
-
-        if "output" not in data:
+        try:
+            data = response.json()
+        except Exception:
+            print("❗️JSON 파싱 실패:", response.text)
             return None
 
-        stock_price = data["output"].get("stck_prpr")
+        output = data.get("output")
+        if not isinstance(output, dict):
+            print("❗️output 필드가 이상함:", output)
+            return None
 
+        stock_price = output.get("stck_prpr")
         if not stock_price:
+            print("❗️현재가 없음")
             return None
 
         return float(stock_price)
 
     except requests.exceptions.RequestException as e:
-        print("❌ 요청 예외 발생:", str(e))
+        print("❌ 외부 요청 예외:", e)
+        return None
+    except Exception as e:
+        print("❌ 예기치 못한 에러:", e)
         return None
 
 
-
 # 주식 가격 조회 뷰
+def error_response(message, code=400):
+    return JsonResponse({"status": "error", "message": message}, status=code)
+
 def stock_price(request):
-    stock_code = request.GET.get('stock_code', '').strip()  # 공백 제거
+    stock_code = request.GET.get('stock_code', '').strip()
 
     if not stock_code:
         return error_response("유효하지 않은 요청 매개변수입니다.", 400)
@@ -78,13 +86,16 @@ def stock_price(request):
     current_price = get_current_stock_price(stock_code)
 
     if current_price is None:
-        return error_response("주식 가격을 가져올 수 없습니다.", 500)
+        return error_response("현재가를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.", 200)  # 👈 여기 status=200으로 변경 (500 방지)
 
     return JsonResponse({
         "status": "success",
         "stock_code": stock_code,
         "current_price": current_price
     })
+
+
+
 
 # 거래 처리 뷰
 from rest_framework.permissions import IsAuthenticated

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 
 from common import hantu_urls, hantu_tr_id, constants
@@ -13,38 +13,30 @@ import uuid
 
 _header = {'content-type': 'application/json'}
 
-# OAuth 토큰 조회
 def get_oauth_token(request):
-    existing_oauth_token = OAuthToken.objects.all()
+    existing_oauth_tokens = OAuthToken.objects.all()
 
-    # 기존 OAuth 토큰이 없다면 새로 발급
-    if len(existing_oauth_token) == 0:
+    # ✅ 1. 토큰이 없다면 새로 발급
+    if not existing_oauth_tokens.exists():
         req_url = f"{hantu_urls.TST_API_URL_BASE}{hantu_urls.OAUTH_TOKEN_ISSUE}"
-        header = _header
-        body = {'appkey': HANTU_API_APP_KEY,
-                'secretkey': HANTU_API_APP_SECRET,
-                'grant_type': 'client_credentials'}
+        body = {
+            'appkey': HANTU_API_APP_KEY,
+            'secretkey': HANTU_API_APP_SECRET,
+            'grant_type': 'client_credentials'
+        }
 
-        res = requests.post(req_url, headers=header, data=json.dumps(body))
+        res = requests.post(req_url, headers=_header, data=json.dumps(body))
         new_oauth_token = res.json()
 
-        # 새로 발급된 토큰 저장
         OAuthToken(approval_key=new_oauth_token['approval_key']).save()
-        return HttpResponse(status=200)
+        return JsonResponse({"message": "신규 토큰 발급 완료"}, status=200)
 
-    # 기존 토큰이 있는 경우
-    if len(existing_oauth_token) > 1:
-        return HttpResponse(status=500)
+    # ✅ 2. 토큰이 여러 개면 오류
+    if existing_oauth_tokens.count() > 1:
+        return JsonResponse({"error": "OAuth 토큰이 2개 이상 존재합니다."}, status=500)
 
-    # 기존 토큰이 있고, 발급된 토큰과 동일한지 확인
-    new_oauth_token = res.json()
-    if existing_oauth_token[0].approval_key == new_oauth_token['approval_key']:
-        print("same token")
-    else:
-        existing_oauth_token[0].delete()
-        OAuthToken(approval_key=new_oauth_token['approval_key']).save()
-
-    return HttpResponse(status=200)
+    # ✅ 3. 하나 있을 때는 그대로 유지 (또s는 갱신하고 싶으면 따로 처리)
+    return JsonResponse({"message": "기존 토큰 유지"}, status=200)
 
 
 # Access 토큰 발급
