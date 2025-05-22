@@ -54,4 +54,6 @@ urlpatterns = [
     path('api/asset/', include('asset.urls')),
 
     path('progress/', include('progress_guides.urls')),
+
+    path('api/v1/ai-chatbot/',include("ai_chatbot.urls")),
 ]
