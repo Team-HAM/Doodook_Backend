@@ -80,9 +80,6 @@ def error_response(message, code=400):
 def stock_price(request):
     stock_code = request.GET.get('stock_code', '').strip()
 
-    if not stock_code:
-        return error_response("유효하지 않은 요청 매개변수입니다.", 400)
-
     current_price = get_current_stock_price(stock_code)
 
     if current_price is None:
