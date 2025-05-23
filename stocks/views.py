@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .utils import get_daily_stock_prices
+import time
 
 class DailyStockPriceView(APIView):
     """✅ 주식 일봉 데이터 조회 API"""
