@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'guides',
     'asset',
     'progress_guides',
+    'point',
     'ai_chatbot',
     # 'corsheaders',
 ]+ THIRD_PARTIES
