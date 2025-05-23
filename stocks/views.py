@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .utils import get_daily_stock_prices
+import time
 
 class DailyStockPriceView(APIView):
     """✅ 주식 일봉 데이터 조회 API"""
@@ -138,6 +139,9 @@ class StockPriceChangeView(APIView):
             )
 
         try:
+            # ✅ 초당 요청 제한 회피: 요청 간 0.25초 지연
+            time.sleep(0.25)
+
             # ✅ 오늘과 5일 전 날짜 계산 (주말/공휴일 고려하여 5일 전부터 데이터 요청)
             today = datetime.today()
             end_date = today.strftime("%Y%m%d")
