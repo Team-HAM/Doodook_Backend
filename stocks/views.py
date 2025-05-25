@@ -3,8 +3,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from django.core.cache import cache
 from .utils import get_daily_stock_prices
-import time
+import logging
+logger = logging.getLogger('stocks')
+
 
 class DailyStockPriceView(APIView):
     """✅ 주식 일봉 데이터 조회 API"""
@@ -105,8 +108,7 @@ class DailyStockPriceView(APIView):
                     "chart_data": chart_data
                 }, 
                 status=status.HTTP_200_OK
-            )  # 함수 호출 끝에 필요한 닫는 괄호 추가
-
+            )
 
         except Exception as e:
             # ✅ 500 오류: 서버 예외 처리
@@ -138,33 +140,49 @@ class StockPriceChangeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        try:
-            # ✅ 초당 요청 제한 회피: 요청 간 0.25초 지연
-            time.sleep(0.25)
+        # ✅ 캐시 키 생성 및 날짜 설정
+        today = datetime.today()
+        end_date = today.strftime("%Y%m%d")
+        start_date = (today - timedelta(days=5)).strftime("%Y%m%d")
+        cache_key = f"stock_change_{stock_code}_{start_date}_{end_date}"
 
-            # ✅ 오늘과 5일 전 날짜 계산 (주말/공휴일 고려하여 5일 전부터 데이터 요청)
-            today = datetime.today()
-            end_date = today.strftime("%Y%m%d")
-            start_date = (today - timedelta(days=5)).strftime("%Y%m%d")  # 최근 5일간의 데이터 요청
+        # ✅ 캐시 확인
+        cached_response = cache.get(cache_key)
+        if cached_response:
+            return Response(cached_response, status=status.HTTP_200_OK)
+
+        # ✅ 요청 중복 방지 플래그 확인
+        request_flag_key = f"{cache_key}_in_progress"
+        if cache.get(request_flag_key):
+            return Response(
+                {
+                    "status": "error",
+                    "message": "요청이 너무 자주 발생하고 있습니다. 잠시 후 다시 시도해주세요.",
+                    "code": 429
+                },
+                status=429
+            )
+
+        try:
+            # ✅ 요청 중임 플래그 설정
+            cache.set(request_flag_key, True, timeout=1)
 
             # ✅ 최근 5일간의 일봉 데이터 가져오기
             daily_prices = get_daily_stock_prices(stock_code, start_date, end_date)
 
-            # ✅ 404 오류: 해당 종목의 데이터가 없을 경우
-            if daily_prices is None or len(daily_prices) == 0:
+            # ✅ 400 오류: 데이터 부족 시
+            if len(daily_prices) < 2:
                 return Response(
                     {
                         "status": "error",
-                        "message": f"'{stock_code}' 주식 가격 조회에 실패했습니다.",
-                        "code": 404
-                    }, 
-                    status=status.HTTP_404_NOT_FOUND
+                        "message": "주식 데이터가 부족합니다.",
+                        "code": 400
+                    },
+                    status=400
                 )
 
-            # ✅ 날짜 순으로 정렬 (최신 데이터가 인덱스 0에 오도록)
+            # ✅ 날짜 순 정렬 (최신 순)
             sorted_prices = sorted(daily_prices, key=lambda x: x["stck_bsop_date"], reverse=True)
-
-            # ✅ 최근 거래일과 그 전 거래일 데이터 가져오기
             current_price = int(sorted_prices[0]["stck_clpr"])
             prev_price = int(sorted_prices[1]["stck_clpr"])
 
@@ -172,28 +190,41 @@ class StockPriceChangeView(APIView):
             price_change_percentage = round((price_change / prev_price) * 100, 2) if prev_price > 0 else 0
             change_status = "up" if price_change > 0 else "down" if price_change < 0 else "unchanged"
 
+            response_data = {
+                "status": "success",
+                "stock_code": stock_code,
+                "current_date": sorted_prices[0]["stck_bsop_date"],
+                "current_price": current_price,
+                "previous_date": sorted_prices[1]["stck_bsop_date"],
+                "previous_price": prev_price,
+                "price_change": abs(price_change),
+                "price_change_percentage": abs(price_change_percentage),
+                "change_status": change_status
+            }
+
+            # ✅ 캐시 저장 (1초)
+            cache.set(cache_key, response_data, timeout=1)
+            return Response(response_data, status=200)
+
+        except ValueError as e:
+            message = str(e)
+            if "거래건수" in message:
+                return Response(
+                    {"status": "error", "message": message, "code": 429},
+                    status=429
+                )
             return Response(
-                {
-                    "status": "success",
-                    "stock_code": stock_code,
-                    "current_date": sorted_prices[0]["stck_bsop_date"],
-                    "current_price": current_price,
-                    "previous_date": sorted_prices[1]["stck_bsop_date"],
-                    "previous_price": prev_price,
-                    "price_change": abs(price_change),
-                    "price_change_percentage": abs(price_change_percentage),
-                    "change_status": change_status
-                }, 
-                status=status.HTTP_200_OK
+                {"status": "error", "message": message, "code": 502},
+                status=502
             )
 
         except Exception as e:
-            # ✅ 500 오류: 서버 예외 처리
             return Response(
                 {
                     "status": "error",
-                    "message": f"서버에서 예기치 못한 오류가 발생했습니다: {str(e)}",
+                    "message": f"서버에서 예기치 못한 오류 발생: {str(e)}",
                     "code": 500
-                }, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                },
+                status=500
             )
+
