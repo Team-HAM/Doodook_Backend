@@ -246,3 +246,13 @@ HANTU_API_APP_SECRET= env("HANTU_API_APP_SECRET")
 
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake'
+    }
+}
+
+
