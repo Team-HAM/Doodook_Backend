@@ -88,11 +88,11 @@ def get_daily_stock_prices(stock_code, start_date, end_date):
         print(f"📢 API 응답 상태 코드: {response.status_code}")  # ✅ 상태 코드 출력
         print(f"📢 API 응답 데이터 (Raw): {response.text}")  # ✅ 전체 응답 데이터 출력
 
-        if response.status_code != 200:
-            print("❌ API 요청 실패!")
-            return None  
 
         data = response.json()
+
+        if response.status_code != 200:
+            raise ValueError(f"API 요청 실패! 상태 코드: {response.status_code}")
 
         # ✅ API 응답 구조 확인 (msg_cd 값 체크)
         if "msg_cd" in data and data["msg_cd"] != "MCA00000":
@@ -105,6 +105,8 @@ def get_daily_stock_prices(stock_code, start_date, end_date):
             return None  
 
         return data["output2"]  # ✅ 정상적인 일봉 데이터 반환
+    
+    
     except requests.exceptions.RequestException as e:
         print(f"❌ API 요청 예외 발생: {e}")
         return None  
