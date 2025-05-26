@@ -120,11 +120,33 @@ class DailyStockPriceView(APIView):
                 }, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+from collections import deque
+import time
+
+# 최근 호출 시간들을 담는 전역 큐 (최대 5개만 유지)
+api_call_times = deque()
+def throttle_api_call():
+    now = time.time()
+
+    # 1초 이상 지난 호출은 제거
+    while api_call_times and now - api_call_times[0] > 1:
+        api_call_times.popleft()
+
+    if len(api_call_times) > 5:
+        # ✅ 호출 제한 초과: 대기
+        wait_time = 1 - (now - api_call_times[0])
+        time.sleep(wait_time)
+        throttle_api_call()  # 재귀 호출
+
+    # ✅ 현재 호출 시간 저장
+    api_call_times.append(time.time())
 
 class StockPriceChangeView(APIView):
     """✅ 주식 가격 전일 대비 변동 정보 조회 API"""
 
     permission_classes = [AllowAny]  # ✅ 누구나 접근 가능
+    
+
 
     def get(self, request):
         stock_code = request.GET.get("stock_code", "")
@@ -166,6 +188,7 @@ class StockPriceChangeView(APIView):
         try:
             # ✅ 요청 중임 플래그 설정
             cache.set(request_flag_key, True, timeout=1)
+            throttle_api_call()
 
             # ✅ 최근 5일간의 일봉 데이터 가져오기
             daily_prices = get_daily_stock_prices(stock_code, start_date, end_date)
