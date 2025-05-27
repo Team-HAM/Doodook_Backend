@@ -40,45 +40,104 @@ def get_oauth_token(request):
 
 
 # Access 토큰 발급
+# def issue_access_token(request):
+#     existing_access_token = AccessToken.objects.all()
+#     if len(existing_access_token) > 1:
+#         return HttpResponse(status=500)
+
+#     req_url = f"{hantu_urls.TST_API_URL_BASE}{hantu_urls.ACCESS_TOKEN_ISSUE}"
+#     header = _header
+#     body = {'appkey': HANTU_API_APP_KEY,
+#             'appsecret': HANTU_API_APP_SECRET,
+#             'grant_type': 'client_credentials'}
+    
+#     res = requests.post(req_url, headers=header, data=json.dumps(body))
+
+#     new_access_token = res.json()
+#     if len(existing_access_token) > 0:
+#         print("ACCESS TOKEN EXISTS")
+#     else:
+#         print("NO EXISTING ACCESS TOKEN")
+    
+#     if 'access_token' in new_access_token:
+#         print("new access token issued successfully")
+#     else:
+#         print(f"error {new_access_token['error_code']}:{new_access_token['error_description']}")
+#         return HttpResponse(status=500)
+
+#     if len(existing_access_token) > 0 and existing_access_token[0].access_token == new_access_token['access_token']:
+#         print("same token")
+#     else:
+#         if len(existing_access_token) > 0:
+#             existing_access_token[0].delete()
+        
+#         new_token = AccessToken(access_token=new_access_token['access_token'], 
+#                     token_type=new_access_token['token_type'],
+#                     expires_in=new_access_token['expires_in'],
+#                     expires_at=timezone.make_aware(dt.parse(new_access_token['access_token_token_expired'])))
+#         new_token.access_token_expired = new_token.is_token_expired()
+#         new_token.save()
+    
+#     return HttpResponse(status=200)
+
 def issue_access_token(request):
     existing_access_token = AccessToken.objects.all()
     if len(existing_access_token) > 1:
-        return HttpResponse(status=500)
+        return JsonResponse({"error": "Access token이 2개 이상 존재합니다."}, status=500)
 
     req_url = f"{hantu_urls.TST_API_URL_BASE}{hantu_urls.ACCESS_TOKEN_ISSUE}"
-    header = _header
-    body = {'appkey': HANTU_API_APP_KEY,
-            'appsecret': HANTU_API_APP_SECRET,
-            'grant_type': 'client_credentials'}
-    
-    res = requests.post(req_url, headers=header, data=json.dumps(body))
+    header = {'Content-Type': 'application/json'}
+    body = {
+        'appkey': HANTU_API_APP_KEY,
+        'appsecret': HANTU_API_APP_SECRET,
+        'grant_type': 'client_credentials'
+    }
 
-    new_access_token = res.json()
-    if len(existing_access_token) > 0:
-        print("ACCESS TOKEN EXISTS")
-    else:
-        print("NO EXISTING ACCESS TOKEN")
-    
-    if 'access_token' in new_access_token:
-        print("new access token issued successfully")
-    else:
-        print(f"error {new_access_token['error_code']}:{new_access_token['error_description']}")
-        return HttpResponse(status=500)
+    try:
+        res = requests.post(req_url, headers=header, data=json.dumps(body))
+        res.raise_for_status()  # status 200이 아니면 에러 발생
+        new_access_token = res.json()
 
-    if len(existing_access_token) > 0 and existing_access_token[0].access_token == new_access_token['access_token']:
-        print("same token")
-    else:
-        if len(existing_access_token) > 0:
-            existing_access_token[0].delete()
-        
-        new_token = AccessToken(access_token=new_access_token['access_token'], 
-                    token_type=new_access_token['token_type'],
-                    expires_in=new_access_token['expires_in'],
-                    expires_at=timezone.make_aware(dt.parse(new_access_token['access_token_token_expired'])))
-        new_token.access_token_expired = new_token.is_token_expired()
-        new_token.save()
-    
-    return HttpResponse(status=200)
+        if 'access_token' not in new_access_token:
+            return JsonResponse({
+                "error": "응답에 access_token 키가 없습니다.",
+                "response": new_access_token
+            }, status=500)
+
+        if len(existing_access_token) > 0 and existing_access_token[0].access_token == new_access_token['access_token']:
+            print("같은 토큰이라 저장 생략")
+        else:
+            if len(existing_access_token) > 0:
+                existing_access_token[0].delete()
+
+            # ⛔ 예외 가능 지점
+            try:
+                expires_at = timezone.make_aware(dt.parse(new_access_token['access_token_token_expired']))
+            except KeyError:
+                return JsonResponse({
+                    "error": "access_token_token_expired 키가 없습니다.",
+                    "response": new_access_token
+                }, status=500)
+
+            new_token = AccessToken(
+                access_token=new_access_token['access_token'],
+                token_type=new_access_token['token_type'],
+                expires_in=new_access_token['expires_in'],
+                expires_at=expires_at
+            )
+            new_token.access_token_expired = new_token.is_token_expired()
+            new_token.save()
+
+        return JsonResponse({"message": "토큰 저장 성공"}, status=200)
+
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({"error": f"요청 실패: {str(e)}"}, status=500)
+
+    except ValueError as e:
+        return JsonResponse({"error": f"응답 JSON 파싱 실패: {str(e)}", "raw_response": res.text}, status=500)
+
+    except Exception as e:
+        return JsonResponse({"error": f"서버 내부 오류: {str(e)}"}, status=500)
 
 # Access 토큰 폐기
 def destroy_access_token(request):
