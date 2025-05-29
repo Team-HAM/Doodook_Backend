@@ -15,7 +15,7 @@ from datetime import timedelta
 import environ
 
 # SITE_URL = 'http://127.0.0.1:8000'  # 개발 환경시 활성화
-SITE_URL = os.environ.get('SITE_URL', 'http://43.200.211.76:8000')
+SITE_URL = 'http://43.200.211.76:8000'
 
 APPEND_SLASH = False
 
