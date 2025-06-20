@@ -1,8 +1,10 @@
 import requests
+import json
+import hashlib
+from django.core.cache import cache
+from django.utils import timezone
 from trade_hantu.models import AccessToken
 from myapi.settings import HANTU_API_APP_KEY, HANTU_API_APP_SECRET
-from django.utils import timezone
-import json
 
 def get_valid_access_token():
     """✅ Access Token을 확인하고, 없거나 만료되면 자동 갱신"""
@@ -10,10 +12,8 @@ def get_valid_access_token():
 
     if access_token is None or access_token.is_token_expired():
         print("⚠️ Access Token이 없거나 만료됨. 새로운 토큰 발급 중...")
-        
-        # ✅ 새로운 Access Token 발급 요청
-        req_url = "https://openapi.koreainvestment.com:9443/oauth2/tokenP"
 
+        req_url = "https://openapi.koreainvestment.com:9443/oauth2/tokenP"
         headers = {"content-type": "application/json"}
         payload = {
             "grant_type": "client_credentials",
@@ -34,7 +34,6 @@ def get_valid_access_token():
             print("❌ Access Token이 응답에 없음!")
             return None
 
-        # ✅ 기존 Access Token 삭제 후 새로 저장
         AccessToken.objects.all().delete()
         new_token_obj = AccessToken(
             access_token=new_token,
@@ -49,64 +48,79 @@ def get_valid_access_token():
         return new_token
 
     return access_token.access_token
-def get_daily_stock_prices(stock_code, start_date, end_date):
-    """✅ 한국투자증권 API에서 주어진 주식 코드의 일봉 데이터를 가져오는 함수"""
-    access_token = get_valid_access_token()  # ✅ Access Token 자동 갱신
 
+
+def get_daily_stock_prices(stock_code, start_date, end_date, cache_ttl=10):
+    """
+    ✅ 주어진 주식 코드의 일봉 데이터를 캐싱 기반으로 조회
+    - 같은 종목+날짜 범위는 API 호출 없이 캐시에서 꺼내 씀
+    - 호출 결과는 `cache_ttl`초 동안 캐시됨
+    """
+    # ✅ 캐시 키 생성 (종목 코드 + 날짜 범위 → 해시로 변환)
+    raw_key = json.dumps({
+        "code": stock_code,
+        "start": start_date,
+        "end": end_date
+    }, sort_keys=True)
+    cache_key = f"daily_prices_{hashlib.sha256(raw_key.encode()).hexdigest()}"
+
+    # ✅ 캐시 확인
+    cached_data = cache.get(cache_key)
+    if cached_data is not None:
+        print("📦 캐시된 일봉 데이터를 반환합니다.")
+        return cached_data
+
+    # ✅ 캐시에 없으면 실제 API 호출
+    access_token = get_valid_access_token()
     if not access_token:
-        return None  # ❌ Access Token이 없으면 None 반환
+        return None
 
-    # API 요청 URL
     req_url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
-
     headers = {
         "content-type": "application/json",
         "authorization": f"Bearer {access_token}",
         "appkey": HANTU_API_APP_KEY,
         "appsecret": HANTU_API_APP_SECRET,
-        "tr_id": "FHKST03010100"  # ✅ 일봉 데이터 조회용 TR ID
+        "tr_id": "FHKST03010100"
     }
-
     params = {
-        "FID_COND_MRKT_DIV_CODE": "J",  # ✅ KOSPI: J, KOSDAQ: Q
-        "FID_INPUT_ISCD": stock_code,  # ✅ 주식 코드
-        "FID_INPUT_DATE_1": start_date,  # ✅ 조회 시작일
-        "FID_INPUT_DATE_2": end_date,  # ✅ 조회 종료일
-        "FID_PERIOD_DIV_CODE": "D",  # ✅ 일봉 데이터 조회
-        "FID_ORG_ADJ_PRC": "0"  # ✅ 수정주가 기준 (0: 수정주가, 1: 원주가)
+        "FID_COND_MRKT_DIV_CODE": "J",
+        "FID_INPUT_ISCD": stock_code,
+        "FID_INPUT_DATE_1": start_date,
+        "FID_INPUT_DATE_2": end_date,
+        "FID_PERIOD_DIV_CODE": "D",
+        "FID_ORG_ADJ_PRC": "0"
     }
-
-    # ✅ API 요청 정보 출력 (디버깅용)
-    print("📢 API 요청 정보")
-    print(f"📢 요청 URL: {req_url}")
-    print(f"📢 요청 헤더: {json.dumps(headers, indent=4)}")
-    print(f"📢 요청 파라미터: {json.dumps(params, indent=4)}")
 
     try:
+        print("📢 API 요청 시작")
+        print(f"📢 요청 파라미터: {json.dumps(params, indent=4)}")
+
         response = requests.get(req_url, headers=headers, params=params)
-
-        print(f"📢 API 응답 상태 코드: {response.status_code}")  # ✅ 상태 코드 출력
-        print(f"📢 API 응답 데이터 (Raw): {response.text}")  # ✅ 전체 응답 데이터 출력
-
+        print(f"📢 응답 상태 코드: {response.status_code}")
+        print(f"📢 응답 본문: {response.text}")
 
         data = response.json()
 
         if response.status_code != 200:
-            raise ValueError(f"API 요청 실패! 상태 코드: {response.status_code}")
+            raise ValueError(f"API 요청 실패: 상태 코드 {response.status_code}")
 
-        # ✅ API 응답 구조 확인 (msg_cd 값 체크)
         if "msg_cd" in data and data["msg_cd"] != "MCA00000":
-            print(f"❌ API 요청 오류 코드: {data['msg_cd']}, 메시지: {data['msg1']}")
-            return None  
+            print(f"❌ API 응답 에러: {data['msg_cd']} / {data['msg1']}")
+            return None
 
-        # ✅ `output2`에서 일봉 데이터 가져오기
         if "output2" not in data or not data["output2"]:
-            print("❌ 'output2' 키가 응답 데이터에 없음")
-            return None  
+            print("❌ 'output2' 데이터가 없음")
+            return None
 
-        return data["output2"]  # ✅ 정상적인 일봉 데이터 반환
-    
-    
+        output = data["output2"]
+
+        # ✅ 캐시에 저장
+        cache.set(cache_key, output, timeout=cache_ttl)
+        print(f"✅ 일봉 데이터 캐시에 저장 완료 ({cache_ttl}초 유효)")
+
+        return output
+
     except requests.exceptions.RequestException as e:
-        print(f"❌ API 요청 예외 발생: {e}")
-        return None  
+        print(f"❌ 요청 예외 발생: {e}")
+        return None
