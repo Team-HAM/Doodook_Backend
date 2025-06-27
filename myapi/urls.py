@@ -59,4 +59,5 @@ urlpatterns = [
 
     path('api/v1/ai-chatbot/',include("ai_chatbot.urls")),
 
+    path('watchlist/', include('watchlist.urls')), #관심 종목
 ]
