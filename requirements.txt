@@ -24,3 +24,4 @@ elasticsearch==8.5.2  # 벡터 검색 관련
 openai==1.2.3  # OpenAI API 연동
 dj-rest-auth==4.0.1  
 redis
+celery
