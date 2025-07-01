@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'progress_guides',
     'point',
     'ai_chatbot',
+    'django_celery_beat', # redis 관련련
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -256,3 +257,8 @@ CACHES = {
 }
 
 
+
+# redis_queue setting
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_TIMEZONE = 'Asia/Seoul'
