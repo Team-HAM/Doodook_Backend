@@ -92,6 +92,13 @@ def get_daily_stock_prices(stock_code, start_date, end_date, cache_ttl=10):
         "FID_ORG_ADJ_PRC": "0"
     }
 
+    # ✅ API 요청 정보 출력 (디버깅용)
+    # print("📢 API 요청 정보")
+    # print(f"📢 요청 URL: {req_url}")
+    # print(f"📢 요청 헤더: {json.dumps(headers, indent=4)}")
+    # print(f"📢 요청 파라미터: {json.dumps(params, indent=4)}")
+
+
     try:
         print("📢 API 요청 시작")
         print(f"📢 요청 파라미터: {json.dumps(params, indent=4)}")
