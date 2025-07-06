@@ -10,6 +10,10 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.views import APIView
 
+from .utils import RateLimiterWithCache
+
+rate_limiter = RateLimiterWithCache()
+
 # 공통 오류 응답 함수
 def error_response(message, code):
     return JsonResponse({
@@ -19,7 +23,18 @@ def error_response(message, code):
     }, status=code)
 
 # 주식 현재가 조회 함수
+
 def get_current_stock_price(stock_code):
+    # 캐시된 데이터가 있으면 바로 반환
+    cached = rate_limiter.get_cached(stock_code)
+    if cached is not None:
+        return cached
+
+    # 요청 가능 여부 체크
+    if not rate_limiter.allow_request():
+        print("🚫 요청 제한. 캐시도 없고 API 호출도 불가.")
+        return None
+
     try:
         access_token = AccessToken.objects.first()
         if access_token is None or not access_token.access_token:
@@ -47,12 +62,7 @@ def get_current_stock_price(stock_code):
             print(f"❗️API 상태코드 오류: {response.status_code}, 응답: {response.text}")
             return None
 
-        try:
-            data = response.json()
-        except Exception:
-            print("❗️JSON 파싱 실패:", response.text)
-            return None
-
+        data = response.json()
         output = data.get("output")
         if not isinstance(output, dict):
             print("❗️output 필드가 이상함:", output)
@@ -63,7 +73,9 @@ def get_current_stock_price(stock_code):
             print("❗️현재가 없음")
             return None
 
-        return float(stock_price)
+        final_price = float(stock_price)
+        rate_limiter.set_cache(stock_code, final_price)  # 캐시에 저장
+        return final_price
 
     except requests.exceptions.RequestException as e:
         print("❌ 외부 요청 예외:", e)
@@ -71,7 +83,6 @@ def get_current_stock_price(stock_code):
     except Exception as e:
         print("❌ 예기치 못한 에러:", e)
         return None
-
 
 # 주식 가격 조회 뷰
 def error_response(message, code=400):

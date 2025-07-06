@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'progress_guides',
     'point',
     'ai_chatbot',
+    'watchlist',
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
