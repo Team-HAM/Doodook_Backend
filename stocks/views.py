@@ -41,6 +41,7 @@ class DailyStockPriceView(APIView):
     permission_classes = [AllowAny]  # ✅ 누구나 접근 가능
 
     def get(self, request):
+        time.sleep(0.51)
         stock_code = request.GET.get("stock_code", "")
 
         # ✅ 400 오류: stock_code가 없거나 잘못된 형식일 때
@@ -187,6 +188,7 @@ class StockPriceChangeView(APIView):
 
 
     def get(self, request):
+        time.sleep(0.51)
         stock_code = request.GET.get("stock_code", "")
 
         # ✅ 400 오류: stock_code가 없거나 잘못된 형식일 때
