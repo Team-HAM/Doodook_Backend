@@ -18,11 +18,8 @@ class AssetSummaryView(APIView):
         total_evaluation = 0
         breakdown = []
 
-        for i, stock in enumerate(stock_portfolio):
-            #print("🔍 stock_code:", repr(stock.stock_code)) - 디버그 용 코드
-
-            if i > 0:
-                time.sleep(0.25)
+        for stock in stock_portfolio:
+            time.sleep(0.5)  # 모든 API 요청 전에 0.5초 대기
 
             current_price = get_current_stock_price(stock.stock_code)
             #print("💰 current_price:", current_price) - 디버그 용 코드
