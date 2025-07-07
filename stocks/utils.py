@@ -5,8 +5,9 @@ from django.core.cache import cache
 from django.utils import timezone
 from trade_hantu.models import AccessToken
 from myapi.settings import HANTU_API_APP_KEY, HANTU_API_APP_SECRET
-
+import time
 def get_valid_access_token():
+    time.sleep(0.51)
     """✅ Access Token을 확인하고, 없거나 만료되면 자동 갱신"""
     access_token = AccessToken.objects.first()
 
@@ -101,6 +102,7 @@ def get_daily_stock_prices(stock_code, start_date, end_date, cache_ttl=10):
 
     try:
         print("📢 API 요청 시작")
+        time.sleep(0.51)
         print(f"📢 요청 파라미터: {json.dumps(params, indent=4)}")
 
         response = requests.get(req_url, headers=headers, params=params)
