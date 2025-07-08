@@ -213,34 +213,25 @@ def Login(request):
     
 # User Activation View
 class UserActivateView(APIView):
-    permission_classes = [AllowAny]  # 누구나 접근 가능
+    permission_classes = [AllowAny]
+
     def get(self, request, id):
         token = request.query_params.get('token')
+
         try:
             user = User.objects.get(pk=id)
             user_id = jwt_payload_get_user_id_handler(token)
 
             if user_id is None or int(id) != int(user_id):
-                return Response({
-                    "status": "error",
-                    "message": "인증에 실패하였습니다.",
-                    "code": 400
-                }, status=status.HTTP_400_BAD_REQUEST)
+                return render(request, 'users/activation_success.html')  # ❌ 토큰 불일치
 
             user.is_active = True
             user.save()
-            return Response({
-                "status": "success",
-                "message": "계정이 활성화되었습니다."
-            }, status=status.HTTP_200_OK)
+
+            return render(request, 'users/activation_success.html')  # ✅ 성공 화면
 
         except User.DoesNotExist:
-            return Response({
-                "status": "error",
-                "message": "사용자를 찾을 수 없습니다.",
-                "code": 404
-            }, status=status.HTTP_404_NOT_FOUND)  # 수정: 400 → 404
-
+            return render(request, 'users/activation_failed.html')  # ❌ 유저 없음
 
 
 #블로그 3편의 내용

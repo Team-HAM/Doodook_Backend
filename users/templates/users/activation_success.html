@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>이메일 인증 완료</title>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            text-align: center;
+            margin-top: 100px;
+        }
+        .checkmark {
+            font-size: 4rem;
+            color: green;
+        }
+        .countdown {
+            font-size: 1.5rem;
+            color: #333;
+            margin-top: 10px;
+        }
+    </style>
+    <script>
+        let seconds = 5;
+        function countdown() {
+            if (seconds > 0) {
+                document.getElementById("countdown").innerText = seconds;
+                seconds--;
+                setTimeout(countdown, 1000);
+            } else {
+                window.location.href = "/";  // 원하는 경로로 리디렉션
+            }
+        }
+        window.onload = countdown;
+    </script>
+</head>
+<body>
+    <div class="checkmark">✅</div>
+    <h1>이메일 인증이 완료되었습니다!</h1>
+    <p class="countdown">
+        <span id="countdown">5</span>초 후 페이지가 자동으로 닫힙니다.
+    </p>
+</body>
+</html>

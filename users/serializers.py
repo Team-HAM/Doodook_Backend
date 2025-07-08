@@ -71,7 +71,7 @@ class UserSerializer(serializers.ModelSerializer):
         activation = UserActivation.objects.create(user=user)
         activation.code = generate_code()
         activation.save()
-        activation_url = f"{settings.SITE_URL}/users/activation/{activation.token}"
+        activation_url = f"{settings.SITE_URL}/users/{user.id}/activation?token={activation.token}"
 
         message = render_to_string('users/user_activate_email.html', {
             'user': user,

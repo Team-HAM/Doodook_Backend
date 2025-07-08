@@ -26,6 +26,7 @@ def error_response(message, code):
 
 def get_current_stock_price(stock_code):
     # 캐시된 데이터가 있으면 바로 반환
+    time.sleep(0.25)
     cached = rate_limiter.get_cached(stock_code)
     if cached is not None:
         return cached
@@ -89,6 +90,7 @@ def error_response(message, code=400):
     return JsonResponse({"status": "error", "message": message}, status=code)
 
 def stock_price(request):
+    time.sleep(0.25) 
     stock_code = request.GET.get('stock_code', '').strip()
 
     current_price = get_current_stock_price(stock_code)
@@ -111,6 +113,7 @@ from rest_framework.decorators import api_view, permission_classes
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def trade(request):
+    time.sleep(0.25) 
     user = request.user  # 현재 로그인한 사용자
 
     # 요청 데이터 파싱
@@ -236,6 +239,7 @@ from stock_search.models import Stock # stock_search의 모델을 가져오기 (
 
 class PortfolioView(APIView):
     permission_classes = [IsAuthenticated]
+    time.sleep(0.25)    
 
     def get(self, request):
         user = request.user
