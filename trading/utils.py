@@ -65,8 +65,8 @@ from collections import deque
 from threading import Lock
 
 class RateLimiterWithCache:
-    time.sleep(0.5)
     def __init__(self, max_per_second=2, max_per_minute=100, cache_ttl=10):
+        time.sleep(0.5)
         self.lock = Lock()
         self.per_second = deque()
         self.per_minute = deque()
@@ -77,6 +77,7 @@ class RateLimiterWithCache:
         self.max_per_minute = max_per_minute
 
     def get_cached(self, stock_code):
+        time.sleep(0.5)
         now = time.time()
         with self.lock:
             cached = self.cache.get(stock_code)
@@ -87,10 +88,12 @@ class RateLimiterWithCache:
         return None
 
     def set_cache(self, stock_code, value):
+        time.sleep(0.5)
         with self.lock:
             self.cache[stock_code] = (time.time(), value)
 
     def allow_request(self):
+        time.sleep(0.5)
         now = time.time()
         with self.lock:
             while self.per_second and now - self.per_second[0] > 1:

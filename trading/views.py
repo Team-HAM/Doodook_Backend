@@ -239,9 +239,9 @@ from stock_search.models import Stock # stock_search의 모델을 가져오기 (
 
 class PortfolioView(APIView):
     permission_classes = [IsAuthenticated]
-    time.sleep(0.5)   
 
     def get(self, request):
+        time.sleep(0.5)
         user = request.user
         stock_portfolio = StockPortfolio.objects.filter(user=user)
 
