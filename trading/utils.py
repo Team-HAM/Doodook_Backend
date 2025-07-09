@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 # 주식 현재가 조회 함수
 def get_current_stock_price(stock_code):
-    time.sleep(0.3)
+    time.sleep(0.5)
     access_token = AccessToken.objects.first()
 
     if access_token is None or not access_token.access_token:
@@ -65,6 +65,7 @@ from collections import deque
 from threading import Lock
 
 class RateLimiterWithCache:
+    time.sleep(0.5)
     def __init__(self, max_per_second=2, max_per_minute=100, cache_ttl=10):
         self.lock = Lock()
         self.per_second = deque()
