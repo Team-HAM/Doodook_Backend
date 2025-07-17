@@ -75,6 +75,7 @@ INSTALLED_APPS = [
     'point',
     'ai_chatbot',
     'watchlist',
+    'notification'
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
