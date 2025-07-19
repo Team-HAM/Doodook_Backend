@@ -11,6 +11,9 @@ from .utils import error_response  # 공통 오류 함수 임포트
 User = get_user_model()
 from decimal import Decimal, InvalidOperation
 
+from datetime import date
+from .models import PointHistory
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def increase_balance(request):
@@ -21,15 +24,24 @@ def increase_balance(request):
             return error_response("금액(amount)을 입력해주세요.", 400)
 
         try:
-            amount = Decimal(str(amount))  # 핵심: Decimal로 변환
+            amount = Decimal(str(amount))
             if amount <= 0:
                 return error_response("금액은 0보다 커야 합니다.", 400)
         except (ValueError, InvalidOperation):
             return error_response("유효한 숫자를 입력해주세요.", 400)
 
         user = request.user
+
+        # ✅ 오늘 이미 적립했는지 확인
+        today = date.today()
+        if PointHistory.objects.filter(user=user, date=today).exists():
+            return error_response("오늘은 이미 포인트를 적립하셨습니다.", 400)
+
+        # ✅ 예수금 증가 및 기록 저장
         user.balance += amount
-        user.save()  # Decimal로 맞춰졌으므로 이 시점에서 save가 실패하면 로그로 잡힘
+        user.save()
+
+        PointHistory.objects.create(user=user, amount=amount)
 
         return Response({
             "status": "success",
