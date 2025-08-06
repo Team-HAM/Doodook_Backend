@@ -1,7 +1,7 @@
 # users/urls.py
 from django.urls import path
 from . import views
-from .views import UserDeleteView, ChangePasswordView, PasswordResetRequestView, PasswordResetVerifyView, ActivateUserView, ActivateWithCodeView
+from .views import UserDeleteView, ChangePasswordView, PasswordResetRequestView, PasswordResetVerifyView, ActivateUserView, ActivateWithCodeView,CompleteTutorialView
 urlpatterns = [
     # 'me/' 경로에 대한 처리
     path('me/', views.MeView.as_view(), name='user_me'),
@@ -15,5 +15,6 @@ urlpatterns = [
     path('password_reset/verify/', PasswordResetVerifyView.as_view(), name='password-reset-verify'),
     path('activation/<uuid:token>', ActivateUserView.as_view(), name='activate-user'),
     path("activation/code/", ActivateWithCodeView.as_view()),
+    path('tutorial/complete/', CompleteTutorialView.as_view(), name='tutorial-complete'),
 ]
 
