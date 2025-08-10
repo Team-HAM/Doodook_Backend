@@ -5,6 +5,7 @@ from myapi.settings import HANTU_API_APP_KEY, HANTU_API_APP_SECRET
 from .models import StockPortfolio
 import requests
 import json
+import time
 
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -69,20 +70,19 @@ def get_current_stock_price(stock_code):
             print("❗️output 필드가 이상함:", output)
             return None
 
-        stock_price = output.get("stck_prpr")
-        if not stock_price:
-            print("❗️현재가 없음")
-            return None
+        stock_price = float(output.get("stck_prpr", 0))
+        change_rate = float(output.get("prdy_ctrt", 0))  # 등락률 (%)
 
-        final_price = float(stock_price)
-        rate_limiter.set_cache(stock_code, final_price)  # 캐시에 저장
-        return final_price
+        result = {
+            "current_price": stock_price,
+            "change_rate": change_rate
+        }
 
-    except requests.exceptions.RequestException as e:
-        print("❌ 외부 요청 예외:", e)
-        return None
+        rate_limiter.set_cache(stock_code, result)
+        return result
+
     except Exception as e:
-        print("❌ 예기치 못한 에러:", e)
+        print("❌ 예외 발생:", e)
         return None
 
 # 주식 가격 조회 뷰
@@ -241,7 +241,7 @@ class PortfolioView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        time.sleep(0.5)
+        import time
         user = request.user
         stock_portfolio = StockPortfolio.objects.filter(user=user)
 
@@ -254,17 +254,19 @@ class PortfolioView(APIView):
 
         portfolio_data = []
         for i, stock in enumerate(stock_portfolio):
-            # 요청 수 제한을 피하기 위해 딜레이
             if i > 0:
-                time.sleep(0.25)  # 초당 4건 = 안정권
+                time.sleep(0.25)  # API 호출 제한 회피용 딜레이
 
-            current_price = get_current_stock_price(stock.stock_code)
-            if current_price is None:
+            current_data = get_current_stock_price(stock.stock_code)
+            if current_data is None:
                 return Response({
                     "status": "error",
                     "message": f"주식 코드 {stock.stock_code}의 현재가를 가져올 수 없습니다.",
                     "code": 500
                 }, status=500)
+
+            current_price = current_data["current_price"]
+            change_rate = current_data["change_rate"]
 
             # 평균 매입가 및 수익률 계산
             if stock.quantity > 0 and stock.total_cost > 0:
@@ -282,13 +284,13 @@ class PortfolioView(APIView):
 
             portfolio_data.append({
                 "stock_code": stock.stock_code,
-                "stock_name": stock_name,  # 이 줄 추가!
+                "stock_name": stock_name,
                 "quantity": stock.quantity,
                 "average_price": round(average_price, 2),
                 "current_price": current_price,
-                "profit_rate": round(profit_rate, 2)
+                "profit_rate": round(profit_rate, 2),
+                "change_rate": round(change_rate, 2)  # ✅ 전일대비 증감률 추가
             })
-
 
         return Response({
             "status": "success",
