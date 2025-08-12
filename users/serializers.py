@@ -30,6 +30,7 @@ def email_isvalid(email):
     return re.match(email_regex, email) is not None
 
 from .models import UserActivation
+from datetime import datetime
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -54,6 +55,17 @@ class UserSerializer(serializers.ModelSerializer):
             else:
                 raise serializers.ValidationError("이미 사용 중인 이메일입니다.")
         return email
+
+    def validate_birthdate(self, value):
+        """YYYYMMDD → YYYY-MM-DD 변환"""
+        if isinstance(value, str):
+            value = value.strip()
+            if len(value) == 8 and value.isdigit():
+                try:
+                    value = datetime.strptime(value, "%Y%m%d").date()
+                except ValueError:
+                    raise serializers.ValidationError("생년월일 형식이 올바르지 않습니다. (예: 19990101)")
+        return value
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -101,6 +113,7 @@ class UserSerializer(serializers.ModelSerializer):
             })
 
         return user
+
 
 from rest_framework import serializers
 from .models import User  

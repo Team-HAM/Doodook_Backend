@@ -200,6 +200,7 @@ def Login(request):
             "data": {
                 "access": access,
                 "refresh": str(refresh),
+                "has_completed_tutorial": user.has_completed_tutorial  # 추가
             }
         }, status=status.HTTP_200_OK)
     
@@ -478,3 +479,23 @@ class PasswordResetVerifyView(APIView):
         reset_obj.delete()
 
         return Response({"message": "비밀번호가 성공적으로 변경되었습니다."})
+    
+# 튜토리얼 완수 여부 확인
+class CompleteTutorialView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.has_completed_tutorial:
+            return Response({
+                "status": "success",
+                "message": "이미 튜토리얼을 완료했습니다."
+            }, status=status.HTTP_200_OK)
+
+        user.has_completed_tutorial = True
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "튜토리얼 완료 처리되었습니다."
+        }, status=status.HTTP_200_OK)
