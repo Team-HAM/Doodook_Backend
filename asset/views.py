@@ -18,14 +18,24 @@ class AssetSummaryView(APIView):
         total_evaluation = 0
         breakdown = []
 
+        # 캐시 딕셔너리 생성
+        price_cache = {}
+        name_cache = {}
+
         for stock in stock_portfolio:
-            time.sleep(0.5)  # 모든 API 요청 전에 0.5초 대기
+            stock_code = stock.stock_code
+            # time.sleep(0.5)  # 모든 API 요청 전에 0.5초 대기
 
-            current_price = get_current_stock_price(stock.stock_code)
-            #print("💰 current_price:", current_price) - 디버그 용 코드
-
+            # 현재가 캐시 확인
+            if stock_code in price_cache:
+                current_price = price_cache[stock_code]
+            else: 
+                time.sleep(0.5)
+                current_price = get_current_stock_price(stock_code)
+                price_cache[stock_code] = current_price
+            
             if current_price is None:
-                print(f"❗ {stock.stock_code} 현재가 없음, 건너뜀")
+                print(f"❗ {stock_code} 현재가 없음, 건너뜀")
                 continue
 
             value = stock.quantity * current_price
@@ -33,17 +43,25 @@ class AssetSummaryView(APIView):
 
             # ✅ 종목명이 없으면 stock_search DB에서 찾아서 저장
             if not stock.stock_name:
-                try:
-                    
-                    stock_info = Stock.objects.get(symbol=stock.stock_code)
-                    stock.stock_name = stock_info.name
-                    stock.save()
-                    print(f"📌 종목명 저장됨: {stock_info.name}")
-                except Stock.DoesNotExist:
-                    print(f"❗ 종목명 DB에 없음: {stock.stock_code}")
+                if stock_code in name_cache:
+                    stock_name = name_cache[stock_code]
+                else:
+                    try:
+                        
+                        stock_info = Stock.objects.get(symbol=stock.stock_code)
+                        stock.stock_name = stock_info.name
+                        name_cache[stock_code] = stock_name
+                        stock.stock_name = stock_name
+                        stock.save()
+                        print(f"📌 종목명 저장됨: {stock_info.name}")
+                    except Stock.DoesNotExist:
+                        stock_name = stock_code
+                        print(f"❗ 종목명 DB에 없음: {stock.stock_code}")
 
-            stock_name = stock.stock_name or stock.stock_code  # fallback
-
+            # stock_name = stock.stock_name or stock.stock_code  # fallback
+            else:
+                stock_name = stock.stock_name
+            
             breakdown.append({
                 "label": stock_name,
                 "value": value
