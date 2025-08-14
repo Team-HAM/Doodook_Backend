@@ -271,7 +271,8 @@ class PortfolioView(APIView):
                     "average_price": round(average_price, 2),
                     "current_price": current_price,
                     "profit_rate": round(profit_rate, 2),
-                    "change_rate": round(change_rate, 2)  # 전일 대비 증감률
+                    "change_rate": round(change_rate, 2),
+                    "change_direction": "up" if change_rate > 0 else "down" if change_rate < 0 else "same"
                 })
 
         return Response({
