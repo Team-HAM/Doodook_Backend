@@ -75,7 +75,8 @@ INSTALLED_APPS = [
     'point',
     'ai_chatbot',
     'watchlist',
-    'notification'
+    'notification',
+    'push_notification'
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -256,4 +257,11 @@ CACHES = {
     }
 }
 
+# push 알림을 위한 setting 
+import os
+import firebase_admin
+from firebase_admin import credentials
 
+cred_path = os.path.join(BASE_DIR, "firebase-adminsdk.json")  # 파일 경로
+cred = credentials.Certificate(cred_path)
+firebase_admin.initialize_app(cred)

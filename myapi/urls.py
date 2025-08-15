@@ -62,4 +62,7 @@ urlpatterns = [
     path('watchlist/', include('watchlist.urls')), #관심 종목
 
     path('notification/', include('notification.urls')) , # 공지사항
+
+    path('push/', include('push_notification.urls')),  # push 알림
+
 ]
