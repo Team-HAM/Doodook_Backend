@@ -29,7 +29,7 @@ def record_api_stats():
 
 
     # ⛳ 로그가 안 찍히면 일단 print로 확인
-    print(f"📊 API 호출 통계 → 1초: {len(calls_last_1_sec)}회 / 60초: {calls_last_60_sec}회")
+    # print(f"📊 API 호출 통계 → 1초: {len(calls_last_1_sec)}회 / 60초: {calls_last_60_sec}회") // 불필요한 로그 제거
     logger.info(f"📊 API 호출 통계 → 1초: {len(calls_last_1_sec)}회 / 60초: {calls_last_60_sec}회")
     
     return len(calls_last_1_sec), calls_last_60_sec
