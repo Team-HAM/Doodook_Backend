@@ -103,11 +103,11 @@ def get_daily_stock_prices(stock_code, start_date, end_date, cache_ttl=10):
     try:
         print("📢 API 요청 시작")
         time.sleep(0.51)
-        print(f"📢 요청 파라미터: {json.dumps(params, indent=4)}")
+        # print(f"📢 요청 파라미터: {json.dumps(params, indent=4)}") // 불필요한 로그 제거
 
         response = requests.get(req_url, headers=headers, params=params)
         print(f"📢 응답 상태 코드: {response.status_code}")
-        print(f"📢 응답 본문: {response.text}")
+        # print(f"📢 응답 본문: {response.text}") // 불필요한 로그 제거
 
         data = response.json()
 

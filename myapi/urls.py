@@ -64,4 +64,7 @@ urlpatterns = [
     path('notification/', include('notification.urls')) , # 공지사항
     
     path('alert/', include('alert.urls')), #알림
+
+    path('api/', include('push_tokens.urls')), # 토큰 등록/해제
+
 ]
