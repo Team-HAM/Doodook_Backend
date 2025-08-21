@@ -63,9 +63,13 @@ urlpatterns = [
     path('watchlist/', include('watchlist.urls')), #관심 종목
 
     path('notification/', include('notification.urls')) , # 공지사항
+    
+    path('alert/', include('alert.urls')), #알림
 
     path('api/', include('push_tokens.urls')), # 토큰 등록/해제
 
+
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # refresh 토큰 url 추가
+
 
 ]
