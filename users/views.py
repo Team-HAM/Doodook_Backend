@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 import traceback
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from jwt import decode as jwt_decode
+# from jwt import decode as jwt_decode
 from django.conf import settings
 
 #내 프로필 정보 확인&수정하기
@@ -51,15 +51,15 @@ def error_response(message, code):
 
 User = get_user_model()
 
-# JWT 디코더 함수
-def jwt_payload_get_user_id_handler(token):
-    try:
-        # JWT 토큰 디코딩
-        payload = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        return payload.get('user_id')
-    except Exception as e:
-        print(f"JWT Decode Error: {e}")
-        return None
+# # JWT 디코더 함수
+# def jwt_payload_get_user_id_handler(token):
+#     try:
+#         # JWT 토큰 디코딩
+#         payload = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+#         return payload.get('user_id')
+#     except Exception as e:
+#         print(f"JWT Decode Error: {e}")
+#         return None
     
     
 class SignupView(CreateAPIView):
@@ -221,10 +221,9 @@ class UserActivateView(APIView):
 
         try:
             user = User.objects.get(pk=id)
-            user_id = jwt_payload_get_user_id_handler(token)
 
-            if user_id is None or int(id) != int(user_id):
-                return render(request, 'users/activation_success.html')  # ❌ 토큰 불일치
+            if str(user.id)!=str(id):
+                return render(request,'users/activation_failed.html')
 
             user.is_active = True
             user.save()
