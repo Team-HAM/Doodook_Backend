@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
-from rest_framework_jwt.settings import api_settings
+# from rest_framework_jwt.settings import api_settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -11,15 +11,15 @@ import random
 from django.template.loader import render_to_string
 User = get_user_model()
 
-# JWT 핸들러 설정
-JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
-JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
+# # JWT 핸들러 설정
+# JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
+# JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
 
 
-# JWT 토큰 생성 함수
-def generate_jwt_token(user):
-    payload = JWT_PAYLOAD_HANDLER(user)
-    return JWT_ENCODE_HANDLER(payload)
+# # JWT 토큰 생성 함수
+# def generate_jwt_token(user):
+#     payload = JWT_PAYLOAD_HANDLER(user)
+#     return JWT_ENCODE_HANDLER(payload)
 
 def generate_code():
     return str(random.randint(100000, 999999))
