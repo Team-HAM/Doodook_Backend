@@ -257,4 +257,13 @@ CACHES = {
     }
 }
 
+# FCM_CREDENTIALS_PATH = env("FCM_CREDENTIALS_PATH", default=None)
+fcm_dict_str = os.getenv("FCM_CREDENTIALS_DICT", None)
+if fcm_dict_str:
+    try:
+        FCM_CREDENTIALS_DICT = json.loads(fcm_dict_str)
+    except json.JSONDecodeError:
+        FCM_CREDENTIALS_DICT = None
+else:
+    FCM_CREDENTIALS_DICT = None
 
