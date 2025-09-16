@@ -15,8 +15,7 @@ from datetime import timedelta
 import environ
 
 # SITE_URL = 'http://127.0.0.1:8000'  # 개발 환경시 활성화
-SITE_URL = 'http://43.200.211.76:8000'
-
+SITE_URL = os.environ.get("SITE_URL")
 APPEND_SLASH = False
 
 APPEND_SLASH = False
@@ -75,6 +74,9 @@ INSTALLED_APPS = [
     'progress_guides',
     'point',
     'ai_chatbot',
+    'watchlist',
+    'notification',
+    'push_tokens'
     # 'corsheaders',
 ]+ THIRD_PARTIES
 
@@ -206,21 +208,24 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 
+from datetime import timedelta
+
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated",],
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        #"rest_framework.authentication.SessionAuthentication",
     ],
 }
 
-JWT_AUTH = {
-    "JWT_SECRET_KEY": SECRET_KEY, 
-    "JWT_ALGORITHM": "HS256", # 암호화 알고리즘
-    "JWT_ALLOW_REFRESH": True,
-    "JWT_EXPIRATION_DELTA": timedelta(days=7), # 유효기간
-    "JWT_REFRESH_EXPIRATION_DELTA": timedelta(days=28), # JWT 토큰 갱신 유효기간
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=7),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=28),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
 }
+
 
 #smtp
 #이메일 인증
@@ -255,4 +260,15 @@ CACHES = {
     }
 }
 
+# FCM_CREDENTIALS_PATH = env("FCM_CREDENTIALS_PATH", default=None)
+fcm_dict_str = os.getenv("FCM_CREDENTIALS_DICT", None)
+if fcm_dict_str:
+    try:
+        FCM_CREDENTIALS_DICT = json.loads(fcm_dict_str)
+        if "private_key" in FCM_CREDENTIALS_DICT:
+            FCM_CREDENTIALS_DICT["private_key"] = FCM_CREDENTIALS_DICT["private_key"].replace("\\n", "\n")  # ✅ 줄바꿈 복원
+    except json.JSONDecodeError:
+        FCM_CREDENTIALS_DICT = None
+else:
+    FCM_CREDENTIALS_DICT = None
 

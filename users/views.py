@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 import traceback
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from jwt import decode as jwt_decode
+# from jwt import decode as jwt_decode
 from django.conf import settings
 
 #내 프로필 정보 확인&수정하기
@@ -51,15 +51,15 @@ def error_response(message, code):
 
 User = get_user_model()
 
-# JWT 디코더 함수
-def jwt_payload_get_user_id_handler(token):
-    try:
-        # JWT 토큰 디코딩
-        payload = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-        return payload.get('user_id')
-    except Exception as e:
-        print(f"JWT Decode Error: {e}")
-        return None
+# # JWT 디코더 함수
+# def jwt_payload_get_user_id_handler(token):
+#     try:
+#         # JWT 토큰 디코딩
+#         payload = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
+#         return payload.get('user_id')
+#     except Exception as e:
+#         print(f"JWT Decode Error: {e}")
+#         return None
     
     
 class SignupView(CreateAPIView):
@@ -200,6 +200,7 @@ def Login(request):
             "data": {
                 "access": access,
                 "refresh": str(refresh),
+                "has_completed_tutorial": user.has_completed_tutorial  # 추가
             }
         }, status=status.HTTP_200_OK)
     
@@ -213,34 +214,24 @@ def Login(request):
     
 # User Activation View
 class UserActivateView(APIView):
-    permission_classes = [AllowAny]  # 누구나 접근 가능
+    permission_classes = [AllowAny]
+
     def get(self, request, id):
         token = request.query_params.get('token')
+
         try:
             user = User.objects.get(pk=id)
-            user_id = jwt_payload_get_user_id_handler(token)
 
-            if user_id is None or int(id) != int(user_id):
-                return Response({
-                    "status": "error",
-                    "message": "인증에 실패하였습니다.",
-                    "code": 400
-                }, status=status.HTTP_400_BAD_REQUEST)
+            if str(user.id)!=str(id):
+                return render(request,'users/activation_failed.html')
 
             user.is_active = True
             user.save()
-            return Response({
-                "status": "success",
-                "message": "계정이 활성화되었습니다."
-            }, status=status.HTTP_200_OK)
+
+            return render(request, 'users/activation_success.html')  # ✅ 성공 화면
 
         except User.DoesNotExist:
-            return Response({
-                "status": "error",
-                "message": "사용자를 찾을 수 없습니다.",
-                "code": 404
-            }, status=status.HTTP_404_NOT_FOUND)  # 수정: 400 → 404
-
+            return render(request, 'users/activation_failed.html')  # ❌ 유저 없음
 
 
 #블로그 3편의 내용
@@ -487,3 +478,23 @@ class PasswordResetVerifyView(APIView):
         reset_obj.delete()
 
         return Response({"message": "비밀번호가 성공적으로 변경되었습니다."})
+    
+# 튜토리얼 완수 여부 확인
+class CompleteTutorialView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.has_completed_tutorial:
+            return Response({
+                "status": "success",
+                "message": "이미 튜토리얼을 완료했습니다."
+            }, status=status.HTTP_200_OK)
+
+        user.has_completed_tutorial = True
+        user.save()
+
+        return Response({
+            "status": "success",
+            "message": "튜토리얼 완료 처리되었습니다."
+        }, status=status.HTTP_200_OK)

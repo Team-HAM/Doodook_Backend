@@ -17,7 +17,8 @@ Including another URLconf
 from django.urls import path, include
 from django.contrib import admin
 from users import views
-from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('doodook/', include('doodook.urls')),
@@ -58,5 +59,17 @@ urlpatterns = [
     path('point/', include('point.urls')), #티끌/태산 모으기
 
     path('api/v1/ai-chatbot/',include("ai_chatbot.urls")),
+
+    path('watchlist/', include('watchlist.urls')), #관심 종목
+
+    path('notification/', include('notification.urls')) , # 공지사항
+    
+    path('alert/', include('alert.urls')), #알림
+
+    path('api/', include('push_tokens.urls')), # 토큰 등록/해제
+
+
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'), # refresh 토큰 url 추가
+
 
 ]

@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 
 # 주식 현재가 조회 함수
 def get_current_stock_price(stock_code):
-    time.sleep(0.3)
+    time.sleep(0.5)
     access_token = AccessToken.objects.first()
 
     if access_token is None or not access_token.access_token:
@@ -58,3 +58,51 @@ def get_current_stock_price(stock_code):
     except requests.exceptions.RequestException as e:
         print("❌ 요청 예외 발생:", str(e))
         return None
+    
+# utils.py
+import time
+from collections import deque
+from threading import Lock
+
+class RateLimiterWithCache:
+    def __init__(self, max_per_second=2, max_per_minute=100, cache_ttl=10):
+        time.sleep(0.5)
+        self.lock = Lock()
+        self.per_second = deque()
+        self.per_minute = deque()
+        self.cache_ttl = cache_ttl
+        self.cache = {}  # stock_code -> (timestamp, value)
+
+        self.max_per_second = max_per_second
+        self.max_per_minute = max_per_minute
+
+    def get_cached(self, stock_code):
+        time.sleep(0.5)
+        now = time.time()
+        with self.lock:
+            cached = self.cache.get(stock_code)
+            if cached:
+                ts, value = cached
+                if now - ts < self.cache_ttl:
+                    return value
+        return None
+
+    def set_cache(self, stock_code, value):
+        time.sleep(0.5)
+        with self.lock:
+            self.cache[stock_code] = (time.time(), value)
+
+    def allow_request(self):
+        time.sleep(0.5)
+        now = time.time()
+        with self.lock:
+            while self.per_second and now - self.per_second[0] > 1:
+                self.per_second.popleft()
+            while self.per_minute and now - self.per_minute[0] > 60:
+                self.per_minute.popleft()
+
+            if len(self.per_second) < self.max_per_second and len(self.per_minute) < self.max_per_minute:
+                self.per_second.append(now)
+                self.per_minute.append(now)
+                return True
+            return False

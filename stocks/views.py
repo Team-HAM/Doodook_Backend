@@ -8,6 +8,32 @@ from .utils import get_daily_stock_prices
 import logging
 logger = logging.getLogger('stocks')
 
+# 기록용 큐 + 로그 기능 추가 (초당 / 분당)
+from collections import deque
+import time
+
+api_call_times = deque()           # 호출 제한용 (1초당 최대 5회)
+api_call_timestamps = deque()      # 호출 통계용 (60초간 기록)
+
+def record_api_stats():
+    now = time.time()
+    api_call_timestamps.append(now)
+
+    # 60초 이상 지난 기록 제거
+    while api_call_timestamps and now - api_call_timestamps[0] > 60:
+        api_call_timestamps.popleft()
+
+    # 통계 계산
+    calls_last_1_sec = [t for t in api_call_timestamps if now - t <= 1]
+    calls_last_60_sec = len(api_call_timestamps)
+
+
+    # ⛳ 로그가 안 찍히면 일단 print로 확인
+    # print(f"📊 API 호출 통계 → 1초: {len(calls_last_1_sec)}회 / 60초: {calls_last_60_sec}회") // 불필요한 로그 제거
+    logger.info(f"📊 API 호출 통계 → 1초: {len(calls_last_1_sec)}회 / 60초: {calls_last_60_sec}회")
+    
+    return len(calls_last_1_sec), calls_last_60_sec
+
 
 class DailyStockPriceView(APIView):
     """✅ 주식 일봉 데이터 조회 API"""
@@ -15,6 +41,7 @@ class DailyStockPriceView(APIView):
     permission_classes = [AllowAny]  # ✅ 누구나 접근 가능
 
     def get(self, request):
+        time.sleep(0.51)
         stock_code = request.GET.get("stock_code", "")
 
         # ✅ 400 오류: stock_code가 없거나 잘못된 형식일 때
@@ -132,6 +159,18 @@ def throttle_api_call():
     while api_call_times and now - api_call_times[0] > 1:
         api_call_times.popleft()
 
+    # ✅ 호출 통계 기록
+    sec_count, min_count = record_api_stats()
+
+    if sec_count >= 2:
+        logger.warning("🚨 초당 호출 제한 근접: %d회", sec_count)
+    if min_count >= 100:
+        logger.warning("🚨 분당 호출 제한 근접: %d회", min_count)
+
+    # ✅ 호출 제한용 큐 관리
+    while api_call_times and now - api_call_times[0] > 1:
+        api_call_times.popleft()
+
     if len(api_call_times) > 5:
         # ✅ 호출 제한 초과: 대기
         wait_time = 1 - (now - api_call_times[0])
@@ -149,6 +188,7 @@ class StockPriceChangeView(APIView):
 
 
     def get(self, request):
+        time.sleep(0.51)
         stock_code = request.GET.get("stock_code", "")
 
         # ✅ 400 오류: stock_code가 없거나 잘못된 형식일 때

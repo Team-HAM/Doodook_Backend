@@ -58,6 +58,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
 
+    has_completed_tutorial = models.BooleanField(default=False)  # 튜토리얼 완료 여부
+
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []

@@ -1,9 +1,11 @@
 from trading.models import StockPortfolio  # trading 앱에서 가져오기
+import time
 from trading.utils import get_current_stock_price
 def calculate_evaluation_amount(user):
     total = 0
     holdings = StockPortfolio.objects.filter(user=user)
     for item in holdings:
+        time.sleep(0.5)  # API 요청 사이에 0.5초 대기
         price = get_current_stock_price(item.stock_code)  # 현재가 함수 필요
         total += item.quantity * price
     return total

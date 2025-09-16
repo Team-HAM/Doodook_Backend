@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
-from rest_framework_jwt.settings import api_settings
+# from rest_framework_jwt.settings import api_settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -11,15 +11,15 @@ import random
 from django.template.loader import render_to_string
 User = get_user_model()
 
-# JWT 핸들러 설정
-JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
-JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
+# # JWT 핸들러 설정
+# JWT_PAYLOAD_HANDLER = api_settings.JWT_PAYLOAD_HANDLER
+# JWT_ENCODE_HANDLER = api_settings.JWT_ENCODE_HANDLER
 
 
-# JWT 토큰 생성 함수
-def generate_jwt_token(user):
-    payload = JWT_PAYLOAD_HANDLER(user)
-    return JWT_ENCODE_HANDLER(payload)
+# # JWT 토큰 생성 함수
+# def generate_jwt_token(user):
+#     payload = JWT_PAYLOAD_HANDLER(user)
+#     return JWT_ENCODE_HANDLER(payload)
 
 def generate_code():
     return str(random.randint(100000, 999999))
@@ -30,6 +30,7 @@ def email_isvalid(email):
     return re.match(email_regex, email) is not None
 
 from .models import UserActivation
+from datetime import datetime
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -55,6 +56,17 @@ class UserSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("이미 사용 중인 이메일입니다.")
         return email
 
+    def validate_birthdate(self, value):
+        """YYYYMMDD → YYYY-MM-DD 변환"""
+        if isinstance(value, str):
+            value = value.strip()
+            if len(value) == 8 and value.isdigit():
+                try:
+                    value = datetime.strptime(value, "%Y%m%d").date()
+                except ValueError:
+                    raise serializers.ValidationError("생년월일 형식이 올바르지 않습니다. (예: 19990101)")
+        return value
+
     def create(self, validated_data):
         user = User.objects.create_user(
             email=validated_data["email"],
@@ -71,7 +83,7 @@ class UserSerializer(serializers.ModelSerializer):
         activation = UserActivation.objects.create(user=user)
         activation.code = generate_code()
         activation.save()
-        activation_url = f"{settings.SITE_URL}/users/activation/{activation.token}"
+        activation_url = f"{settings.SITE_URL}/users/{user.id}/activation?token={activation.token}"
 
         message = render_to_string('users/user_activate_email.html', {
             'user': user,
@@ -101,6 +113,7 @@ class UserSerializer(serializers.ModelSerializer):
             })
 
         return user
+
 
 from rest_framework import serializers
 from .models import User  
